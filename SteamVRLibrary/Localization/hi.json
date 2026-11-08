@@ -144,5 +144,10 @@
   "Override FOV tangent (experimental)": "FOV टैंजेंट बदलें (प्रायोगिक)",
   "Horizontal FOV tangent": "क्षैतिज FOV टैंजेंट",
   "Vertical FOV tangent": "लंबवत FOV टैंजेंट",
-  "{0}%": "{0}%"
+  "{0}%": "{0}%",
+  "Override VDXR render resolution (experimental)": "VDXR रेंडर रिज़ॉल्यूशन बदलें (प्रयोगात्मक)",
+  "VDXR render resolution": "VDXR रेंडर रिज़ॉल्यूशन",
+  "Override additional sharpening (experimental)": "अतिरिक्त शार्पनिंग बदलें (प्रयोगात्मक)",
+  "Additional sharpening": "अतिरिक्त शार्पनिंग",
+  "Sharpening strength": "शार्पनिंग की तीव्रता"
 }

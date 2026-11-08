@@ -144,5 +144,10 @@
   "Override FOV tangent (experimental)": "تعديل مماس FOV (تجريبي)",
   "Horizontal FOV tangent": "مماس FOV الأفقي",
   "Vertical FOV tangent": "مماس FOV الرأسي",
-  "{0}%": "{0}%"
+  "{0}%": "{0}%",
+  "Override VDXR render resolution (experimental)": "تجاوز دقة تصيير VDXR (تجريبي)",
+  "VDXR render resolution": "دقة تصيير VDXR",
+  "Override additional sharpening (experimental)": "تجاوز زيادة الحدة الإضافية (تجريبي)",
+  "Additional sharpening": "زيادة الحدة الإضافية",
+  "Sharpening strength": "مستوى الحدة"
 }

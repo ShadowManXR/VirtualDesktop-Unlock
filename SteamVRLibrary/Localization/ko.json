@@ -144,5 +144,10 @@
   "Override FOV tangent (experimental)": "FOV 탄젠트 변경 (실험적)",
   "Horizontal FOV tangent": "수평 FOV 탄젠트",
   "Vertical FOV tangent": "수직 FOV 탄젠트",
-  "{0}%": "{0}%"
+  "{0}%": "{0}%",
+  "Override VDXR render resolution (experimental)": "VDXR 렌더링 해상도 재정의 (실험적)",
+  "VDXR render resolution": "VDXR 렌더링 해상도",
+  "Override additional sharpening (experimental)": "추가 선명화 재정의 (실험적)",
+  "Additional sharpening": "추가 선명화",
+  "Sharpening strength": "선명화 강도"
 }

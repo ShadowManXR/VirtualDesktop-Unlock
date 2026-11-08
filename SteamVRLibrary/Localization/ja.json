@@ -144,5 +144,10 @@
   "Override FOV tangent (experimental)": "FOV タンジェントを変更（実験的）",
   "Horizontal FOV tangent": "水平 FOV タンジェント",
   "Vertical FOV tangent": "垂直 FOV タンジェント",
-  "{0}%": "{0}%"
+  "{0}%": "{0}%",
+  "Override VDXR render resolution (experimental)": "VDXR レンダリング解像度を上書き（実験的）",
+  "VDXR render resolution": "VDXR レンダリング解像度",
+  "Override additional sharpening (experimental)": "追加のシャープ化を上書き（実験的）",
+  "Additional sharpening": "追加のシャープ化",
+  "Sharpening strength": "シャープ化の強度"
 }

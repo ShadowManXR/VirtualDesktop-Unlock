@@ -59,6 +59,28 @@ class LaunchPresetRecoveryTests
         first=r.Begin(1,a,90,2,144,0,now,1f,null,0.8f,null);second=r.Begin(2,b,144,0,120,2,now,0.8f,null,0.6f,null);fps=120;quality=2;horizontal=0.8f;r.Fail(first);r.Fail(second);restoreFov();
         Check(horizontal==0.8f,"Manual FOV matching an older preset survives overlapping recovery");
         Check(LaunchPresetRecovery.Near(0.80001f,0.8f)&&!LaunchPresetRecovery.Near(0.81f,0.8f)&&!LaunchPresetRecovery.Near(Single.NaN,0.8f),"FOV comparison tolerates roundoff without swallowing a percentage-step change");
+        float render=1.25f,sharpening=0.5f;bool useSharpening=true;
+        Action restoreAdvanced=delegate{r.RestoreReady(Current,delegate(int v){fps=v;},delegate(int v){quality=v;},
+            currentAdvanced:delegate{return new[]{render,sharpening};},currentUseSharpening:delegate{return useSharpening;},setRender:delegate(float v){render=v;},setSharpening:delegate(float v){sharpening=v;},setUseSharpening:delegate(bool v){useSharpening=v;});};
+        session=r.Begin(1,a,90,2,144,0,now,originalRender:1f,appliedRender:1.25f,originalUseSharpening:false,appliedUseSharpening:true,originalSharpening:0.7f,appliedSharpening:0.5f);fps=144;quality=0;r.Fail(session);
+        Check(File.ReadAllText(path).Contains("version=\"3\""),"Advanced recovery uses format 3");r=Recovery(path);restoreAdvanced();
+        Check(render==1f&&sharpening==0.7f&&!useSharpening&&fps==90&&quality==2&&!File.Exists(path),"Advanced settings survive reload and restore all three originals");
+        session=r.Begin(1,a,90,2,144,0,now,originalRender:1f,appliedRender:1.25f,originalUseSharpening:false,appliedUseSharpening:true,originalSharpening:0.7f,appliedSharpening:0.5f);fps=144;quality=0;render=1.4f;sharpening=0.6f;useSharpening=true;r.Fail(session);restoreAdvanced();
+        Check(render==1.4f&&sharpening==0.6f&&!useSharpening,"Manual render scale and sharpening strength survive independent enable recovery");
+        session=r.Begin(1,a,90,2,144,0,now,originalRender:1f,appliedRender:1.25f,originalUseSharpening:true,appliedUseSharpening:false,originalSharpening:0.7f,appliedSharpening:0.5f);fps=144;quality=0;render=1.25f;sharpening=0.5f;useSharpening=true;r.Fail(session);restoreAdvanced();
+        Check(render==1f&&sharpening==0.7f&&useSharpening,"A manual sharpening enable survives while unchanged scale and strength restore");
+        session=r.Begin(1,a,90,2,144,0,now,originalUseSharpening:true,appliedUseSharpening:false,originalSharpening:0.7f,appliedSharpening:0.5f);fps=144;quality=0;render=1.6f;sharpening=0.5f;useSharpening=false;r.Fail(session);restoreAdvanced();
+        Check(render==1.6f&&sharpening==0.7f&&useSharpening,"Force-off sharpening restores its original On state without touching omitted render scale");
+        first=r.Begin(1,a,90,2,144,0,now,originalRender:1f,appliedRender:1.2f,originalUseSharpening:false,appliedUseSharpening:true,originalSharpening:0.7f,appliedSharpening:0.4f);
+        second=r.Begin(2,b,144,0,120,2,now,originalRender:1.2f,appliedRender:1.5f,originalUseSharpening:true,appliedUseSharpening:false,originalSharpening:0.4f,appliedSharpening:0.8f);
+        fps=120;quality=2;render=1.2f;sharpening=0.4f;useSharpening=true;r.Fail(first);r.Fail(second);r=Recovery(path);restoreAdvanced();
+        Check(render==1.2f&&sharpening==0.4f&&useSharpening,"Manual advanced choices matching an older preset survive overlapping recovery after reload");
+        bool invalidAdvanced=false;try{r.Begin(1,a,90,2,144,0,now,originalRender:1f,appliedRender:Single.NaN);}catch(InvalidDataException){invalidAdvanced=true;}
+        Check(invalidAdvanced&&r.Sessions.Count==0&&!File.Exists(path),"Invalid advanced recovery is rejected before any record is saved");
+        session=r.Begin(1,a,90,2,144,0,now,originalRender:1f,appliedRender:1.25f);fps=144;quality=0;render=1.25f;r.Fail(session);
+        bool unavailable=false;try{Restore(r);}catch(InvalidOperationException){unavailable=true;}
+        Check(unavailable&&r.Sessions.Count==1&&File.Exists(path),"Missing advanced callbacks retain recovery for an updated connected helper");restoreAdvanced();
+        Check(render==1f&&r.Sessions.Count==0,"Pending advanced recovery resumes with complete callbacks");
         Console.WriteLine("Recovery checks passed: "+checks);return 0;
     }catch(Exception e){Console.WriteLine(e);return 1;}}
 }

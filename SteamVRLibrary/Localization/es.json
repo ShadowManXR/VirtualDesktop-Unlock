@@ -144,5 +144,10 @@
   "Override FOV tangent (experimental)": "Modificar tangentes FOV (experimental)",
   "Horizontal FOV tangent": "Tangente FOV horizontal",
   "Vertical FOV tangent": "Tangente FOV vertical",
-  "{0}%": "{0}%"
+  "{0}%": "{0}%",
+  "Override VDXR render resolution (experimental)": "Cambiar resolución VDXR (experimental)",
+  "VDXR render resolution": "Resolución de renderizado VDXR",
+  "Override additional sharpening (experimental)": "Cambiar nitidez adicional (experimental)",
+  "Additional sharpening": "Nitidez adicional",
+  "Sharpening strength": "Intensidad de nitidez"
 }

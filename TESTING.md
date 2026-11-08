@@ -1,13 +1,13 @@
-# Virtual Desktop Unlock 0.2.1 validation guide
+# Virtual Desktop Unlock 0.2.2 validation guide
 
-This build adds experimental FOV tangent launch presets for the verified Virtual Desktop Streamer 1.34.25.0 x64 / Quest 3 setup. The user confirmed that the Forefront preset works at 70% horizontal / 70% vertical with the 0.2.1 helper. Other games and runtimes still need individual verification.
+This build adds experimental VDXR render resolution and Additional sharpening launch presets for the verified Virtual Desktop Streamer 1.34.25.0 x64 / Quest 3 setup. The user confirmed that the Forefront preset works at 70% horizontal / 70% vertical with the 0.2.1 helper. In 0.2.2, monitored Forefront tests also confirmed Additional sharpening and 50% VDXR render-scale application and exit recovery; the user reported everything working. Other games and runtimes still need individual verification.
 
 ## Install or upgrade
 
 1. Close games and exit the previous Virtual Desktop Unlock app from its tray menu.
 2. Extract the ZIP into a new writable folder. Copy your previous app's `Data` folder into it to retain library selections. Shared launch presets are already stored in `%APPDATA%\Virtual Desktop Unlock`.
 3. If a helper is installed, run **Uninstall RE3 Integration.cmd** from the previous build. Then run **Install RE3 Integration.cmd** from this build. Both operations request administrator permission and restart Streamer. The installer refuses to overwrite another version directly.
-4. Open **Virtual Desktop Unlock.exe** from this build and reconnect VD to the PC. The app requires .NET Desktop Runtime 10. The app and helper must both be 0.2.1 for FOV presets.
+4. Open **Virtual Desktop Unlock.exe** from this build and reconnect VD to the PC. The app requires .NET Desktop Runtime 10. **The app and helper must both be 0.2.2 for the new overrides.** Older helpers reject format 3 and block configured game launches.
 
 ## Test a launch and exit
 
@@ -20,8 +20,18 @@ This build adds experimental FOV tangent launch presets for the verified Virtual
 
 The helper uses the original Streamer FOV setters before entering its launcher. Automated tests verify values reaching an isolated native configuration block, rather than a running headset. Actual rendering changes and compatibility with each game's VR runtime need this manual test.
 
+## Test VDXR render resolution and Additional sharpening
+
+1. Keep Forefront closed. Note the original **VDXR Render Resolution**, **Additional sharpening** On/Off state and sharpening strength in the PC Streamer Advanced tab. Keep FPS, quality and FOV fixed while comparing.
+2. In Forefront's Launch Preset, enable **Override VDXR render resolution (experimental)** and select a distinct value, for example **125%**. Scroll down to enable **Override additional sharpening (experimental)**, select **50%**, and save.
+3. Launch Forefront through VD's Games tab using VDXR. Verify the PC Advanced-tab selections. Compare runtime render recommendations or swapchain dimensions if available, and compare sharpening visually with a separate Off launch. The encoded stream dimensions need not change with VDXR render scale.
+4. Quit the game and wait a few seconds. Verify the original render scale, sharpening On/Off state and strength are restored. On another run, manually change one setting and confirm exit preserves it while restoring the others.
+5. **Override additional sharpening** enables sharpening at launch using the selected strength. To leave global sharpening unchanged, clear this override. Clear the render override to leave the global render scale unchanged.
+
+Opening or saving the editor does not apply settings immediately. Tests cover native configuration and CPU-side shader buffer forwarding, not actual GPU image output. Use a fresh game/runtime session when comparing VDXR render dimensions.
+
 ## Logs and rollback
 
 Launch preparation and recovery are logged in `%PROGRAMDATA%\Virtual Desktop\LibraryOverrides.log`. Installer output is in `%PROGRAMDATA%\Virtual Desktop Unlock\installer.log`.
 
-FOV presets and pending recovery use XML format version 2. Before downgrading, close the game, keep VD connected until restoration completes, then disable FOV overrides in every configured game and save. Confirm `%APPDATA%\Virtual Desktop Unlock\LaunchPresetRecovery.xml` has cleared. Uninstall this helper, then reinstall the previous build's helper and run its app. Older apps and helpers do not support FOV records.
+Render resolution and sharpening presets and pending recovery use XML format version 3. Before downgrading, close the game, keep VD connected until restoration completes, then disable both new overrides in every configured game and save. FOV-only records use format 2 and require helper 0.2.1 or later; disable FOV too when reverting to a pre-0.2.1 build. Confirm `%APPDATA%\Virtual Desktop Unlock\LaunchPresetRecovery.xml` has cleared. Uninstall this helper, then reinstall the previous build's helper and run its app. Older apps and helpers do not support the new format 3 records.

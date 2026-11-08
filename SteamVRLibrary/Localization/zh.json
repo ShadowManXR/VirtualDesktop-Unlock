@@ -144,5 +144,10 @@
   "Override FOV tangent (experimental)": "覆盖 FOV 正切（实验性）",
   "Horizontal FOV tangent": "水平 FOV 正切",
   "Vertical FOV tangent": "垂直 FOV 正切",
-  "{0}%": "{0}%"
+  "{0}%": "{0}%",
+  "Override VDXR render resolution (experimental)": "覆盖 VDXR 渲染分辨率（实验性）",
+  "VDXR render resolution": "VDXR 渲染分辨率",
+  "Override additional sharpening (experimental)": "覆盖额外锐化（实验性）",
+  "Additional sharpening": "额外锐化",
+  "Sharpening strength": "锐化强度"
 }

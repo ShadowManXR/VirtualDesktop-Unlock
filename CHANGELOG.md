@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.2 — 2026-11-08
+
+- Add optional per-game VDXR render resolution (50–200%) and Additional sharpening (5–100% strength).
+- Apply new settings before launch and recover their original values after exit, preserving manual changes independently.
+- Keep existing presets unchanged by default and read earlier preset/recovery formats; use format 3 when new overrides are present.
+- Enable Additional sharpening directly through its override checkbox, with no separate On/Off checkbox.
+- Make the preset editor scroll while keeping Save and Cancel available; localize the new controls in all supported languages.
+- Add editor, validation, native forwarding and advanced recovery checks. Forefront launch-and-exit tests confirmed preset application and restoration; VDXR reported 0.500 supersampling with a 50% override.
+- Update the app and helper to 0.2.2.
+
 ## 0.2.1 — 2026-11-08
 
 - Add optional horizontal and vertical FOV tangent launch presets, from 40% to 100%, disabled by default.

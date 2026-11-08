@@ -2,7 +2,7 @@
 param([string]$StreamerPath,[switch]$SkipTests)
 $ErrorActionPreference='Stop'
 $root=$PSScriptRoot
-$version='0.2.1'
+$version='0.2.2'
 $env:DOTNET_CLI_HOME=Join-Path $root '.dotnet-build'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'
 $env:DOTNET_GENERATE_ASPNET_CERTIFICATE='false'
@@ -51,6 +51,10 @@ if(!$SkipTests){
             if($LASTEXITCODE -ne 0){throw 'FOV forwarding harness did not compile.'}
             & (Join-Path $tests 'FovHookTest.exe') ([IO.Path]::GetFullPath($StreamerPath)) (Join-Path $tests 'fov-settings') (Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')
             if($LASTEXITCODE -ne 0){throw 'Isolated FOV forwarding test failed.'}
+            & $compiler /nologo /target:exe ('/out:'+(Join-Path $tests 'RenderSharpenHookTest.exe')) (Join-Path $root 'src\RuntimeOverrides\RenderSharpenHookTest.cs')
+            if($LASTEXITCODE -ne 0){throw 'Render/sharpen forwarding harness did not compile.'}
+            & (Join-Path $tests 'RenderSharpenHookTest.exe') ([IO.Path]::GetFullPath($StreamerPath)) (Join-Path $tests 'render-sharpen-settings') (Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')
+            if($LASTEXITCODE -ne 0){throw 'Isolated render/sharpen forwarding test failed.'}
         }
         $oldData=$env:VD_LIBRARY_TEST_DATA;$oldDelay=$env:VD_LIBRARY_TEST_DELAYED;$oldLog=$env:VD_LIBRARY_OVERRIDE_LOG
         $oldFile=$env:VD_LIBRARY_OVERRIDES_FILE;$oldExpected=$env:VD_LIBRARY_TEST_EXPECTED_IDS

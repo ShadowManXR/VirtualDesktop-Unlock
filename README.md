@@ -2,7 +2,7 @@
 
 # Virtual Desktop Unlock
 
-**v0.2.1** · Windows x64 · Unofficial · MIT
+**v0.2.2** · Windows x64 · Unofficial · MIT
 
 An unofficial program for extending Virtual Desktop Streaming. Add custom Steam games, including games that use third-party VR mods, to Virtual Desktop's actual headset Games tab using the optional runtime helper. The desktop companion app organizes your installed Steam games, saves selections for the helper, and provides optional headset-specific bitrate ceilings.
 
@@ -12,7 +12,7 @@ An unofficial program for extending Virtual Desktop Streaming. Add custom Steam 
 
 | Feature | Result |
 |---|---|
-| Optional integration | Adds custom Steam IDs to Streamer's game discovery. Supports verified Streamer **1.34.23.0** and **1.34.25.0** binaries with helper 0.2.1.0. RE3 and Gothic were previously confirmed in the headset on 1.34.23.0. |
+| Optional integration | Adds custom Steam IDs to Streamer's game discovery. Supports verified Streamer **1.34.23.0** and **1.34.25.0** binaries with helper 0.2.2.0. RE3 and Gothic were previously confirmed in the headset on 1.34.23.0. |
 | Virtual Desktop Unlock app | Add/Remove buttons, search, saving, and per-game launch presets. Custom additions sync to the helper's shared configuration. Restart Streamer and reconnect the headset to apply changes. |
 
 When the saved selection differs from the running helper's confirmed selection, a **Restart Streamer and reconnect to apply custom additions** link appears below the lists. Click it to close and relaunch Streamer; Windows may request administrator permission. The link clears after the helper confirms the selection. Reconnect the headset and reopen Games afterward. The app also detects restarts performed outside the app; failed or cancelled restarts leave the link available to retry.
@@ -52,6 +52,14 @@ The launch preset editor includes an optional **Override FOV tangent (experiment
 The helper applies the selected FOV values through Streamer's original settings setters before the game launcher runs, and restores the previous values after exit. Manual changes during play are preserved separately for each axis. Isolated tests cover native configuration forwarding and recovery. The user confirmed that the FOV preset works in Forefront with both axes set to 70%; rendering behavior in other games remains unverified.
 
 Use the **0.2.1 app and helper together**. FOV-enabled presets and pending recovery use XML format version 2, which older helpers reject. Finish recovery and disable all FOV overrides before reverting to an older build. See [TESTING.md](TESTING.md) for installation and test steps. This build supports launch presets on the verified Streamer **1.34.25.0 / Quest 3** setup.
+
+### VDXR render resolution and Additional sharpening (0.2.2)
+
+Two optional overrides are available in **Launch Preset**. **Override VDXR render resolution (experimental)** enables a **50–200%** slider. **Override additional sharpening (experimental)** enables Additional sharpening at launch and a **5–100%** strength slider. Clear an override checkbox to leave that global setting unchanged. The editor scrolls while Save and Cancel remain available at the bottom.
+
+Both overrides start disabled for existing presets. The helper captures the original values before changing them, applies them before the original game launcher, and restores each unchanged value after exit. Manual changes are preserved independently. Render resolution is a VDXR control; it does not promise equivalent behavior with other runtimes or change the headset's quality tier. Additional sharpening is PC-side CAS before encoding, separate from headset sharpening.
+
+**Install both the 0.2.2 app and helper before enabling these overrides.** New settings and pending recovery use XML format version 3; earlier helpers reject it and can prevent configured games from launching. Existing format 1 and 2 records remain readable. Isolated native forwarding, editor and recovery tests passed. Live Forefront tests confirmed launch and exit restoration, and VDXR reported 0.500 supersampling at a 50% render override. The user reported both tests working; other games and runtimes remain unverified. See [TESTING.md](TESTING.md) for upgrade and verification steps.
 
 ## Higher bitrate limits
 
