@@ -2,7 +2,7 @@
 
 # Virtual Desktop Unlock
 
-**v0.1.8** · Windows x64 · Unofficial · MIT
+**v0.2.0** · Windows x64 · Unofficial · MIT
 
 An unofficial program for extending Virtual Desktop Streaming. Add custom Steam games, including games that use third-party VR mods, to Virtual Desktop's actual headset Games tab using the optional runtime helper. The desktop companion app organizes your installed Steam games, saves selections for the helper, and provides optional headset-specific bitrate ceilings.
 
@@ -12,7 +12,7 @@ An unofficial program for extending Virtual Desktop Streaming. Add custom Steam 
 
 | Feature | Result |
 |---|---|
-| Optional integration | Adds custom Steam IDs to Streamer's game discovery. Supports verified Streamer **1.34.23.0** and **1.34.25.0** binaries with helper 0.1.8.0. RE3 and Gothic were previously confirmed in the headset on 1.34.23.0. |
+| Optional integration | Adds custom Steam IDs to Streamer's game discovery. Supports verified Streamer **1.34.23.0** and **1.34.25.0** binaries with helper 0.2.0.0. RE3 and Gothic were previously confirmed in the headset on 1.34.23.0. |
 | Virtual Desktop Unlock app | Add/Remove buttons, search, saving, and per-game launch presets. Custom additions sync to the helper's shared configuration. Restart Streamer and reconnect the headset to apply changes. |
 
 **Both the app and helper must be version 0.1.1 or later for selection syncing.** Version 0.1.0's helper added only RE3. Removing an entry removes its custom override; native VR titles can still appear automatically through Steam metadata. Adding a game does not install or enable a VR mod.
@@ -43,7 +43,9 @@ For a game without a saved preset, **Use preset** starts unchecked and both slid
 
 `quality="0"` means Low. The launch hook supports the verified x64 Streamer **1.34.25.0** binary and Quest 3, and requires the updated helper containing `LaunchPresetRuntime`; older released helpers do not implement it. It applies the settings before entering VD's original launcher, waits one second for synchronization, and checks that the PC selection remains unchanged. There is no protocol acknowledgement from the headset on this path, so the delay alone is not proof of headset readiness. If headset settings are unavailable or change during preparation, the configured launch is cancelled and the reason is written to `%PROGRAMDATA%\Virtual Desktop\LibraryOverrides.log`. Unconfigured games retain VD's original launch behavior.
 
-The selected settings remain after the game exits. Manual changes are allowed; each game's preset is reapplied on its next launch. Uncheck the game and save to disable its preset. This covers VD's Games tab, not launches made directly through Steam or the companion app's Steam launch button. Forefront has been verified live; other configured Steam identities follow the same path and are covered by isolated hook tests.
+After the game and its launchers exit, the helper restores the FPS and quality selected before launch. It checks each setting separately and preserves values changed manually during play. Recovery waits until game-folder processes have been absent for three seconds, allowing launcher handoffs. A launch that never produces a game process times out after two minutes and restores its settings. Pending recovery is saved in `%APPDATA%\Virtual Desktop Unlock\LaunchPresetRecovery.xml`, so a Streamer restart or headset disconnect does not discard the original selections; restoration resumes when the game has exited and the headset reconnects. Overlapping configured games restore their presets in reverse launch order, so an older game exiting cannot overwrite a newer game's active preset.
+
+Each game's preset is reapplied on its next launch. Clear **Use preset** and save to disable that game's preset. This covers VD's Games tab, not launches made directly through Steam. Forefront's launch preset has been verified live; exit recovery has passed isolated lifecycle and real child-process tests, with an end-to-end headset launch/exit test still pending.
 
 ## Higher bitrate limits
 

@@ -4,12 +4,14 @@ using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using System.Xml;
+using System.Linq;
 using VirtualDesktop.Unlock;
 
 namespace VirtualDesktop.LibraryOverrides
@@ -26,6 +28,10 @@ namespace VirtualDesktop.LibraryOverrides
         private static readonly SemaphoreSlim gate=new SemaphoreSlim(1,1);
         private static bool installed;
         private static MethodInfo replacementRoot;
+        private static LaunchPresetRecovery recovery;
+        private static DispatcherTimer recoveryTimer;
+        private static int polling;
+        private static string lastRecoveryError;
         public static string ConfigurationPath { get { return Environment.GetEnvironmentVariable("VD_LAUNCH_PRESETS_FILE") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),"Virtual Desktop Unlock","LaunchPresets.xml"); } }
 
         public static void Install(Assembly assembly,Action<string> logger)
@@ -51,6 +57,7 @@ namespace VirtualDesktop.LibraryOverrides
             if(connectedGetter.IsStatic || connectedGetter.ReturnType!=typeof(bool) || connectedGetter.GetParameters().Length!=0)throw new MissingMethodException("Connection getter changed.");
             if(System.Windows.Application.Current==null)throw new InvalidOperationException("WPF application unavailable.");
             dispatcher=System.Windows.Application.Current.Dispatcher;log=logger;
+            recovery=new LaunchPresetRecovery(Path.Combine(Path.GetDirectoryName(ConfigurationPath),"LaunchPresetRecovery.xml"),logger);
             // Emit a matching GameID ABI; boxing is done inside managed IL, never
             // by guessing the layout/register convention of a value-type argument.
             var dynamicAssembly=AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName("VDUnlockLaunchAdapter"),AssemblyBuilderAccess.Run);
@@ -69,6 +76,9 @@ namespace VirtualDesktop.LibraryOverrides
             try{Marshal.Copy(jump,0,address,jump.Length);FlushInstructionCache(Process.GetCurrentProcess().Handle,address,(UIntPtr)jump.Length);}
             finally{uint ignored;VirtualProtect(address,(UIntPtr)jump.Length,old,out ignored);}
             installed=true;log("Launch preset hook installed; Steam game profiles configuration="+ConfigurationPath);
+            recoveryTimer=new DispatcherTimer(DispatcherPriority.Background);recoveryTimer.Interval=TimeSpan.FromSeconds(2);
+            recoveryTimer.Tick+=async delegate {await PollRecovery();};recoveryTimer.Start();
+            log("Launch preset exit recovery active; pending sessions="+recovery.Sessions.Count);
         }
 
         // Recreate only the compiler's async entry wrapper. The original MoveNext,
@@ -107,16 +117,64 @@ namespace VirtualDesktop.LibraryOverrides
         private static async Task LaunchWithPreset(object game,int[] preset)
         {
             await gate.WaitAsync().ConfigureAwait(false);
+            PresetRecoverySession session=null;
             try{
-                await OnDispatcher(delegate{ApplyPreset(preset);}).ConfigureAwait(false);
+              Exception failure=null;
+              try{
+                uint id=Convert.ToUInt32(idField.GetValue(game));
+                await OnDispatcher(delegate{RestoreReady();User();}).ConfigureAwait(false);
+                // Repeated requests for an already running game must not replace
+                // the baseline with the preset itself.
+                if(recovery.Active(id)!=null){await original(game).ConfigureAwait(false);return;}
+                string directory=await Task.Run(delegate{return SteamGameLifetime.InstallDirectory(id);}).ConfigureAwait(false);
+                if((await Task.Run(delegate{return SteamGameLifetime.RunningDirectories(new[]{directory});}).ConfigureAwait(false)).Contains(directory)){
+                    log("Launch preset retained current settings for already running Steam "+id);await original(game).ConfigureAwait(false);return;
+                }
+                await OnDispatcher(delegate{
+                    var user=User();session=recovery.Begin(id,directory,Convert.ToInt32(Property(user,"VRFramerate")),Convert.ToInt32(Property(user,"VRGraphicsQuality")),preset[0],preset[1],DateTime.UtcNow);
+                    ApplyPreset(preset);
+                }).ConfigureAwait(false);
                 // VD exposes no client acknowledgement here. Allow transport/UI to
                 // settle, then verify the selection has not changed before launch.
                 await Task.Delay(1000).ConfigureAwait(false);
                 await OnDispatcher(delegate{CheckPreset(preset);}).ConfigureAwait(false);
                 log("Launch preset releasing Steam "+idField.GetValue(game)+"; fps="+preset[0]+"; quality="+preset[1]+"; utc="+DateTime.UtcNow.ToString("O"));
                 await original(game).ConfigureAwait(false);
-            }catch(Exception e){log("Launch preset cancelled launch: "+e.GetBaseException().Message);throw;}
+                try{await ObserveRecovery().ConfigureAwait(false);}catch(Exception observation){RecoveryError(observation);}
+              }catch(Exception e){failure=e;}
+              if(failure!=null){
+                if(session!=null){
+                    try{
+                        var running=await Task.Run(delegate{return SteamGameLifetime.RunningDirectories(new[]{session.Directory});}).ConfigureAwait(false);
+                        await OnDispatcher(delegate{if(!running.Contains(session.Directory))recovery.Fail(session);RestoreReady();}).ConfigureAwait(false);
+                    }catch(Exception restore){RecoveryError(restore);}
+                }
+                log("Launch preset cancelled launch: "+failure.GetBaseException().Message);ExceptionDispatchInfo.Capture(failure).Throw();
+              }
+            }
             finally{gate.Release();}
+        }
+        private static async Task ObserveRecovery()
+        {
+            var directories=recovery.Sessions.Where(s=>!s.Ended).Select(s=>s.Directory).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            var running=await Task.Run(delegate{return SteamGameLifetime.RunningDirectories(directories);}).ConfigureAwait(false);
+            await OnDispatcher(delegate{recovery.Observe(DateTime.UtcNow,running.Contains);RestoreReady();}).ConfigureAwait(false);
+        }
+        private static void RestoreReady()
+        {
+            recovery.RestoreReady(delegate{var user=User();return new[]{Convert.ToInt32(Property(user,"VRFramerate")),Convert.ToInt32(Property(user,"VRGraphicsQuality"))};},delegate(int value){Set(User(),"VRFramerate",value);},delegate(int value){Set(User(),"VRGraphicsQuality",value);});
+        }
+        private static void RecoveryError(Exception error)
+        {
+            string message=error.GetBaseException().Message;if(lastRecoveryError!=message){lastRecoveryError=message;log("Launch preset recovery pending: "+message);}
+        }
+        private static async Task PollRecovery()
+        {
+            if(Interlocked.CompareExchange(ref polling,1,0)!=0)return;
+            await gate.WaitAsync().ConfigureAwait(false);
+            try{if(recovery.Sessions.Count>0)await ObserveRecovery().ConfigureAwait(false);lastRecoveryError=null;}
+            catch(Exception error){RecoveryError(error);}
+            finally{gate.Release();Interlocked.Exchange(ref polling,0);}
         }
         private static async Task OnDispatcher(Action action)
         {

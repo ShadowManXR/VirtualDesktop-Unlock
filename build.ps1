@@ -2,7 +2,7 @@
 param([string]$StreamerPath,[switch]$SkipTests)
 $ErrorActionPreference='Stop'
 $root=$PSScriptRoot
-$version='0.1.8'
+$version='0.2.0'
 $env:DOTNET_CLI_HOME=Join-Path $root '.dotnet-build'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'
 $env:DOTNET_GENERATE_ASPNET_CERTIFICATE='false'
@@ -18,7 +18,7 @@ if($LASTEXITCODE -ne 0){throw 'Companion app build failed.'}
 $compiler=Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $framework=Split-Path -Parent $compiler
 $references=@("/reference:$framework\WPF\PresentationFramework.dll","/reference:$framework\WPF\WindowsBase.dll",'/reference:System.Xaml.dll')
-& $compiler /nologo /target:library ('/out:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) $references (Join-Path $root 'src\RuntimeOverrides\LibraryOverrides.cs') (Join-Path $root 'src\RuntimeOverrides\BitrateRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRuntime.cs') (Join-Path $root 'Shared\LaunchPresetConfiguration.cs') (Join-Path $root 'Shared\BitrateConfiguration.cs')
+& $compiler /nologo /target:library ('/out:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) $references (Join-Path $root 'src\RuntimeOverrides\LibraryOverrides.cs') (Join-Path $root 'src\RuntimeOverrides\BitrateRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRecovery.cs') (Join-Path $root 'src\RuntimeOverrides\SteamGameLifetime.cs') (Join-Path $root 'Shared\LaunchPresetConfiguration.cs') (Join-Path $root 'Shared\BitrateConfiguration.cs')
 if($LASTEXITCODE -ne 0){throw 'Runtime helper build failed.'}
 Copy-Item -LiteralPath (Join-Path $root 'src\RuntimeOverrides\RuntimeHook.config') -Destination (Join-Path $hook 'VirtualDesktop.Streamer.exe.config')
 [pscustomobject]@{Version=$version;StreamerVersion='1.34.25.0';StreamerSHA256='0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8';SupportedStreamers=@(@{Version='1.34.23.0';SHA256='FEAD548C57DF539006E6C97A7A29D46FDE172F756F40D65DBDB77ABAAFA3AEAD'},@{Version='1.34.25.0';SHA256='0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8'});HelperSHA256=(Get-FileHash -LiteralPath (Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')).Hash;ConfigSHA256=(Get-FileHash -LiteralPath (Join-Path $hook 'VirtualDesktop.Streamer.exe.config')).Hash} | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $hook 'manifest.json')
@@ -27,6 +27,10 @@ if(!$SkipTests){
     if($LASTEXITCODE -ne 0){throw 'Launch-preset tests did not compile.'}
     & (Join-Path $hook 'LaunchPresetTests.exe') (Join-Path $tests 'launch-presets')
     if($LASTEXITCODE -ne 0){throw 'Launch-preset tests failed.'}
+    & $compiler /nologo /target:exe ('/out:'+(Join-Path $hook 'LaunchPresetRecoveryTests.exe')) ('/reference:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRecoveryTests.cs')
+    if($LASTEXITCODE -ne 0){throw 'Recovery tests did not compile.'}
+    & (Join-Path $hook 'LaunchPresetRecoveryTests.exe') (Join-Path $tests 'recovery')
+    if($LASTEXITCODE -ne 0){throw 'Recovery tests failed.'}
     $test=Start-Process -FilePath (Join-Path $publish 'Virtual Desktop Unlock.exe') -ArgumentList '--self-test' -WindowStyle Hidden -PassThru
     $test.WaitForExit()
     Get-Content -LiteralPath (Join-Path $publish 'self-test-result.txt') | Write-Output

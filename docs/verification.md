@@ -1,5 +1,13 @@
 # Verification
 
+## Launch preset exit recovery — 2026-11-08
+
+The helper checkpoints original/applied settings before changing them, monitors executable paths under the app's Steam installation, and restores settings after three seconds without game-folder processes. Launcher children are included; known crash-report and setup helpers are excluded. The monitor uses limited process-query access rather than inspecting game memory. Steam library/manifest resolution is bounded to the library's `steamapps/common` directory.
+
+Twenty-one recovery checks passed: baseline checkpointing, launcher handoff, ordinary exit, independent manual FPS/quality preservation, partially applied failed launches, disconnected retries, recovery after helper restart, an active game surviving a helper restart, startup grace/timeout, overlapping sessions and manual choices matching an older preset, escaped secondary-library paths, traversal rejection, and external-entity rejection. A real temporary bootstrapper launched a worker and exited; the monitor retained the worker until its own exit. These processes ran entirely in isolated build-test directories. The existing companion, configuration, original async-launch, actual-entry hook, library and unsupported-bitrate regression checks also passed.
+
+The user chose to test the headset launch/exit cycle later. Installation/startup is verified separately; no end-to-end headset exit-restoration claim is made yet. Process visibility is required for lifetime tracking, and a retained non-crash helper in a game's installation can delay restoration. Saved recovery contains app IDs, installation paths and selections, with no credentials.
+
 ## Localization — 2026-10-23
 
 Ten embedded catalogs each contain 115 keys. Tests check identical key sets, nonempty values and matching format placeholders. Detection covers all ten languages, regional variants such as fr-CA and zh-TW, and unsupported-language English fallback. Preference tests cover initial detection/persistence, explicit-choice precedence after restart and Windows language changes, and recovery from malformed JSON. Tests use isolated preference paths and leave the real user's language, tray and startup settings untouched.

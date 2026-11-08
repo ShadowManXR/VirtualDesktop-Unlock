@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0 — 2026-11-08
+
+- Restore the previous FPS and graphics-quality selections after a preset-controlled game exits, preserving manual changes and pending recovery across Streamer restarts or headset reconnects.
+- Track game and launcher processes, recover failed launches, and unwind overlapping preset sessions without overwriting manual selections.
+- Update the companion app and startup helper to version 0.2.0.
+
 ## 0.1.8 — 2026-11-08
 
 - Highlight cached games in blue only when Steam's original metadata identifies them as VR titles; keep custom additions in the normal text color.
