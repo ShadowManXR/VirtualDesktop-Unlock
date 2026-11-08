@@ -47,7 +47,7 @@
   "Launch requested through Steam  ·  {0}": "Steam से चलाने का अनुरोध  ·  {0}",
   "Launch automatically when Windows starts": "Windows शुरू होने पर स्वतः चलाएँ",
   "Show in system tray (close window to tray)": "बंद करने पर सिस्टम ट्रे में दिखाएँ",
-  "Enable higher bitrate limits": "उच्च बिटरेट सीमाएँ सक्षम करें",
+  "Enable higher bitrate limits * Experimental": "उच्च बिटरेट सीमाएँ सक्षम करें * प्रायोगिक",
   "Done": "पूर्ण",
   "Cancel": "रद्द करें",
   "Save profiles": "प्रोफ़ाइल सहेजें",
@@ -140,5 +140,9 @@
   "Launch Preset": "लॉन्च प्रीसेट",
   "Launch Preset — Virtual Desktop Unlock": "लॉन्च प्रीसेट — Virtual Desktop Unlock",
   "Save preset": "प्रीसेट सहेजें",
-  "Apply this preset before launching this game from VD.": "VD से यह गेम लॉन्च होने से पहले यह प्रीसेट लागू करें।"
+  "Apply this preset before launching this game from VD.": "VD से यह गेम लॉन्च होने से पहले यह प्रीसेट लागू करें।",
+  "Override FOV tangent (experimental)": "FOV टैंजेंट बदलें (प्रायोगिक)",
+  "Horizontal FOV tangent": "क्षैतिज FOV टैंजेंट",
+  "Vertical FOV tangent": "लंबवत FOV टैंजेंट",
+  "{0}%": "{0}%"
 }

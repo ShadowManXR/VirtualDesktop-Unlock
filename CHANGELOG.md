@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.1 — 2026-11-08
+
+- Add optional horizontal and vertical FOV tangent launch presets, from 40% to 100%, disabled by default.
+- Apply FOV through Streamer settings before launch and restore each original axis on exit while preserving manual changes.
+- Read existing presets and recovery records; use format version 2 when FOV overrides are present.
+- Add FOV validation, editor, native forwarding and recovery checks. The user confirmed the Forefront FOV preset works at 70% on both axes with the updated helper.
+- Add “by ShadowManXR” to Settings and mark higher bitrate limits as Experimental.
+- Update the app and helper to 0.2.1.
+
 ## 0.2.0 — 2026-11-08
 
 - Restore the previous FPS and graphics-quality selections after a preset-controlled game exits, preserving manual changes and pending recovery across Streamer restarts or headset reconnects.

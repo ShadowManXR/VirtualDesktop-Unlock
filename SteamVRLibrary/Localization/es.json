@@ -47,7 +47,7 @@
   "Launch requested through Steam  ·  {0}": "Inicio solicitado en Steam  ·  {0}",
   "Launch automatically when Windows starts": "Iniciar al arrancar Windows",
   "Show in system tray (close window to tray)": "Mostrar en la bandeja al cerrar",
-  "Enable higher bitrate limits": "Activar límites de tasa superiores",
+  "Enable higher bitrate limits * Experimental": "Activar límites de tasa superiores * Experimental",
   "Done": "Listo",
   "Cancel": "Cancelar",
   "Save profiles": "Guardar perfiles",
@@ -140,5 +140,9 @@
   "Launch Preset": "Preajuste de inicio",
   "Launch Preset — Virtual Desktop Unlock": "Preajuste de inicio — Virtual Desktop Unlock",
   "Save preset": "Guardar preajuste",
-  "Apply this preset before launching this game from VD.": "Aplicar este preajuste antes de iniciar este juego desde VD."
+  "Apply this preset before launching this game from VD.": "Aplicar este preajuste antes de iniciar este juego desde VD.",
+  "Override FOV tangent (experimental)": "Modificar tangentes FOV (experimental)",
+  "Horizontal FOV tangent": "Tangente FOV horizontal",
+  "Vertical FOV tangent": "Tangente FOV vertical",
+  "{0}%": "{0}%"
 }

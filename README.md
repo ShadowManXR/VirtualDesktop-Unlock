@@ -2,7 +2,7 @@
 
 # Virtual Desktop Unlock
 
-**v0.2.0** · Windows x64 · Unofficial · MIT
+**v0.2.1** · Windows x64 · Unofficial · MIT
 
 An unofficial program for extending Virtual Desktop Streaming. Add custom Steam games, including games that use third-party VR mods, to Virtual Desktop's actual headset Games tab using the optional runtime helper. The desktop companion app organizes your installed Steam games, saves selections for the helper, and provides optional headset-specific bitrate ceilings.
 
@@ -12,7 +12,7 @@ An unofficial program for extending Virtual Desktop Streaming. Add custom Steam 
 
 | Feature | Result |
 |---|---|
-| Optional integration | Adds custom Steam IDs to Streamer's game discovery. Supports verified Streamer **1.34.23.0** and **1.34.25.0** binaries with helper 0.2.0.0. RE3 and Gothic were previously confirmed in the headset on 1.34.23.0. |
+| Optional integration | Adds custom Steam IDs to Streamer's game discovery. Supports verified Streamer **1.34.23.0** and **1.34.25.0** binaries with helper 0.2.1.0. RE3 and Gothic were previously confirmed in the headset on 1.34.23.0. |
 | Virtual Desktop Unlock app | Add/Remove buttons, search, saving, and per-game launch presets. Custom additions sync to the helper's shared configuration. Restart Streamer and reconnect the headset to apply changes. |
 
 When the saved selection differs from the running helper's confirmed selection, a **Restart Streamer and reconnect to apply custom additions** link appears below the lists. Click it to close and relaunch Streamer; Windows may request administrator permission. The link clears after the helper confirms the selection. Reconnect the headset and reopen Games afterward. The app also detects restarts performed outside the app; failed or cancelled restarts leave the link available to retry.
@@ -44,6 +44,14 @@ For a game without a saved preset, **Use preset** starts unchecked and both slid
 After the game and its launchers exit, the helper restores the FPS and quality selected before launch. It checks each setting separately and preserves values changed manually during play. Recovery waits until game-folder processes have been absent for three seconds, allowing launcher handoffs. A launch that never produces a game process times out after two minutes and restores its settings. Pending recovery is saved in `%APPDATA%\Virtual Desktop Unlock\LaunchPresetRecovery.xml`, so a Streamer restart or headset disconnect does not discard the original selections; restoration resumes when the game has exited and the headset reconnects. Overlapping configured games restore their presets in reverse launch order, so an older game exiting cannot overwrite a newer game's active preset.
 
 Each game's preset is reapplied on its next launch. Clear **Use preset** and save to disable that game's preset. This covers VD's Games tab, not launches made directly through Steam. Forefront's launch preset has been verified live; exit recovery has passed isolated lifecycle and real child-process tests, with an end-to-end headset launch/exit test still pending.
+
+### Experimental FOV tangent presets (0.2.1)
+
+The launch preset editor includes an optional **Override FOV tangent (experimental)** checkbox, disabled by default. When enabled, horizontal and vertical sliders independently select **40–100%** of the normal FOV tangent in 1% steps. These are tangent multipliers, not angles in degrees. Existing presets leave FOV unchanged until you explicitly enable the override.
+
+The helper applies the selected FOV values through Streamer's original settings setters before the game launcher runs, and restores the previous values after exit. Manual changes during play are preserved separately for each axis. Isolated tests cover native configuration forwarding and recovery. The user confirmed that the FOV preset works in Forefront with both axes set to 70%; rendering behavior in other games remains unverified.
+
+Use the **0.2.1 app and helper together**. FOV-enabled presets and pending recovery use XML format version 2, which older helpers reject. Finish recovery and disable all FOV overrides before reverting to an older build. See [TESTING.md](TESTING.md) for installation and test steps. This build supports launch presets on the verified Streamer **1.34.25.0 / Quest 3** setup.
 
 ## Higher bitrate limits
 

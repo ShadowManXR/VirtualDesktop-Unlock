@@ -8,9 +8,9 @@ using System.Collections.Generic;
 using System.Xml;
 using System.Security.Cryptography;
 
-[assembly: AssemblyVersion("0.2.0.0")]
+[assembly: AssemblyVersion("0.2.1.0")]
 [assembly: AssemblyTitle("Virtual Desktop Library Overrides")]
-[assembly: AssemblyFileVersion("0.2.0.0")]
+[assembly: AssemblyFileVersion("0.2.1.0")]
 
 namespace VirtualDesktop.LibraryOverrides
 {

@@ -47,7 +47,7 @@
   "Launch requested through Steam  ·  {0}": "Запуск через Steam  ·  {0}",
   "Launch automatically when Windows starts": "Запускать при входе в Windows",
   "Show in system tray (close window to tray)": "Сворачивать в системный трей при закрытии",
-  "Enable higher bitrate limits": "Повысить лимиты битрейта",
+  "Enable higher bitrate limits * Experimental": "Повысить лимиты битрейта * Экспериментально",
   "Done": "Готово",
   "Cancel": "Отмена",
   "Save profiles": "Сохранить профили",
@@ -140,5 +140,9 @@
   "Launch Preset": "Пресет запуска",
   "Launch Preset — Virtual Desktop Unlock": "Пресет запуска — Virtual Desktop Unlock",
   "Save preset": "Сохранить пресет",
-  "Apply this preset before launching this game from VD.": "Применять этот пресет перед запуском этой игры из VD."
+  "Apply this preset before launching this game from VD.": "Применять этот пресет перед запуском этой игры из VD.",
+  "Override FOV tangent (experimental)": "Переопределить FOV tangent (экспериментально)",
+  "Horizontal FOV tangent": "Горизонтальный FOV tangent",
+  "Vertical FOV tangent": "Вертикальный FOV tangent",
+  "{0}%": "{0}%"
 }

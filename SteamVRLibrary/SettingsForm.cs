@@ -61,8 +61,8 @@ public sealed class SettingsForm : Form
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.CenterParent;
         AutoScaleMode = AutoScaleMode.Dpi;
-        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(24), ColumnCount = 1, RowCount = 7 };
-        foreach (int height in new[] { 40, 32, 44, 48, 48, 48, 44 }) root.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
+        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(24), ColumnCount = 1, RowCount = 8 };
+        foreach (int height in new[] { 40, 32, 44, 48, 48, 48, 44, 26 }) root.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
         Controls.Add(root);
         root.Controls.Add(new Label { Text = "Settings", AutoSize = true, Font = new Font(Font.FontFamily, 19, FontStyle.Bold) }, 0, 0);
         root.Controls.Add(new Label { Text = "Language", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, ForeColor = Color.FromArgb(159, 176, 199) }, 0, 1);
@@ -111,7 +111,7 @@ public sealed class SettingsForm : Form
             }
         };
         root.Controls.Add(tray, 0, 4);
-        var bitrate = new CheckBox { Text = "Enable higher bitrate limits", Enabled = bitratePreferences != null, Checked = bitratePreferences?.Configuration.Enabled ?? false, AutoSize = true, Anchor = AnchorStyles.Left, AccessibleName = "Remove streaming bitrate limits" };
+        var bitrate = new CheckBox { Text = "Enable higher bitrate limits * Experimental", Enabled = bitratePreferences != null, Checked = bitratePreferences?.Configuration.Enabled ?? false, AutoSize = true, Anchor = AnchorStyles.Left, AccessibleName = "Remove streaming bitrate limits" };
         bool updatingBitrate = false;
         bitrate.CheckedChanged += (_, _) =>
         {
@@ -126,6 +126,7 @@ public sealed class SettingsForm : Form
         root.Controls.Add(bitrate, 0, 5);
         var close = new Button { Text = "Done", DialogResult = DialogResult.OK, Size = new Size(100, 34), Anchor = AnchorStyles.Right, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(108, 218, 188), ForeColor = BackColor };
         root.Controls.Add(close, 0, 6);
+        root.Controls.Add(new Label { Text = "by ShadowManXR", Dock = DockStyle.Fill, TextAlign = ContentAlignment.BottomCenter, ForeColor = Color.FromArgb(159, 176, 199), Font = new Font(Font.FontFamily, 9), Margin = Padding.Empty }, 0, 7);
         AcceptButton = CancelButton = close;
         Localizer.Apply(this);
     }

@@ -47,7 +47,7 @@
   "Launch requested through Steam  ·  {0}": "تم طلب التشغيل عبر Steam  ·  {0}",
   "Launch automatically when Windows starts": "التشغيل تلقائيًا عند بدء Windows",
   "Show in system tray (close window to tray)": "العرض في علبة النظام عند إغلاق النافذة",
-  "Enable higher bitrate limits": "تفعيل حدود أعلى لمعدل البت",
+  "Enable higher bitrate limits * Experimental": "تفعيل حدود أعلى لمعدل البت * تجريبي",
   "Done": "تم",
   "Cancel": "إلغاء",
   "Save profiles": "حفظ الملفات",
@@ -140,5 +140,9 @@
   "Launch Preset": "إعداد التشغيل",
   "Launch Preset — Virtual Desktop Unlock": "إعداد التشغيل — Virtual Desktop Unlock",
   "Save preset": "حفظ الإعداد",
-  "Apply this preset before launching this game from VD.": "تطبيق هذا الإعداد قبل تشغيل هذه اللعبة من VD."
+  "Apply this preset before launching this game from VD.": "تطبيق هذا الإعداد قبل تشغيل هذه اللعبة من VD.",
+  "Override FOV tangent (experimental)": "تعديل مماس FOV (تجريبي)",
+  "Horizontal FOV tangent": "مماس FOV الأفقي",
+  "Vertical FOV tangent": "مماس FOV الرأسي",
+  "{0}%": "{0}%"
 }

@@ -47,7 +47,7 @@
   "Launch requested through Steam  ·  {0}": "Steam 経由で起動を要求  ·  {0}",
   "Launch automatically when Windows starts": "Windows 起動時に自動実行",
   "Show in system tray (close window to tray)": "閉じると通知領域に格納",
-  "Enable higher bitrate limits": "高いビットレート上限を有効化",
+  "Enable higher bitrate limits * Experimental": "高いビットレート上限を有効化 * 実験的",
   "Done": "完了",
   "Cancel": "キャンセル",
   "Save profiles": "設定を保存",
@@ -140,5 +140,9 @@
   "Launch Preset": "起動プリセット",
   "Launch Preset — Virtual Desktop Unlock": "起動プリセット — Virtual Desktop Unlock",
   "Save preset": "プリセットを保存",
-  "Apply this preset before launching this game from VD.": "VD からこのゲームを起動する前に適用します。"
+  "Apply this preset before launching this game from VD.": "VD からこのゲームを起動する前に適用します。",
+  "Override FOV tangent (experimental)": "FOV タンジェントを変更（実験的）",
+  "Horizontal FOV tangent": "水平 FOV タンジェント",
+  "Vertical FOV tangent": "垂直 FOV タンジェント",
+  "{0}%": "{0}%"
 }

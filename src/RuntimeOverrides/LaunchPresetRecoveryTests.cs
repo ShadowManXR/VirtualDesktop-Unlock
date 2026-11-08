@@ -48,6 +48,17 @@ class LaunchPresetRecoveryTests
             Thread.Sleep(2000);Check(!SteamGameLifetime.RunningDirectories(new[]{worker}).Contains(worker),"Real process tracking detects the final worker exit");
         }
         File.WriteAllText(path,"<!DOCTYPE x [<!ENTITY x SYSTEM 'file:///not-allowed'>]><LaunchPresetRecovery version=\"1\">&x;</LaunchPresetRecovery>");bool unsafeXml=false;try{Recovery(path);}catch(System.Xml.XmlException){unsafeXml=true;}Check(unsafeXml,"Recovery rejects external-entity XML");File.Delete(path);
+        float horizontal=0.8f,vertical=0.9f;
+        Action restoreFov=delegate{r.RestoreReady(Current,delegate(int v){fps=v;},delegate(int v){quality=v;},delegate{return new[]{horizontal,vertical};},delegate(float v){horizontal=v;},delegate(float v){vertical=v;});};
+        r=Recovery(path);session=r.Begin(1,a,90,2,144,0,now,1f,0.95f,0.8f,0.9f);fps=144;quality=0;r.Fail(session);r=Recovery(path);restoreFov();
+        Check(horizontal==1f&&vertical==0.95f&&fps==90&&quality==2&&!File.Exists(path),"FOV recovery survives reload and restores both original axes");
+        session=r.Begin(1,a,90,2,144,0,now,1f,1f,0.8f,0.9f);fps=144;quality=0;horizontal=0.85f;vertical=0.9f;r.Fail(session);restoreFov();
+        Check(horizontal==0.85f&&vertical==1f,"Manual horizontal FOV survives while unchanged vertical FOV restores");
+        session=r.Begin(1,a,90,2,144,0,now,1f,null,0.8f,null);fps=144;quality=0;horizontal=0.8f;vertical=0.7f;r.Fail(session);restoreFov();
+        Check(horizontal==1f&&vertical==0.7f,"An omitted FOV axis is never changed during recovery");
+        first=r.Begin(1,a,90,2,144,0,now,1f,null,0.8f,null);second=r.Begin(2,b,144,0,120,2,now,0.8f,null,0.6f,null);fps=120;quality=2;horizontal=0.8f;r.Fail(first);r.Fail(second);restoreFov();
+        Check(horizontal==0.8f,"Manual FOV matching an older preset survives overlapping recovery");
+        Check(LaunchPresetRecovery.Near(0.80001f,0.8f)&&!LaunchPresetRecovery.Near(0.81f,0.8f)&&!LaunchPresetRecovery.Near(Single.NaN,0.8f),"FOV comparison tolerates roundoff without swallowing a percentage-step change");
         Console.WriteLine("Recovery checks passed: "+checks);return 0;
     }catch(Exception e){Console.WriteLine(e);return 1;}}
 }

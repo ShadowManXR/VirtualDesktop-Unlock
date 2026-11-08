@@ -2,7 +2,7 @@
 param([string]$StreamerPath,[switch]$SkipTests)
 $ErrorActionPreference='Stop'
 $root=$PSScriptRoot
-$version='0.2.0'
+$version='0.2.1'
 $env:DOTNET_CLI_HOME=Join-Path $root '.dotnet-build'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'
 $env:DOTNET_GENERATE_ASPNET_CERTIFICATE='false'
@@ -46,6 +46,12 @@ if(!$SkipTests){
         if($LASTEXITCODE -ne 0){throw 'Launch-preset hook harness did not compile.'}
         & (Join-Path $hook 'LaunchPresetHookTest.exe') ([IO.Path]::GetFullPath($StreamerPath)) (Join-Path $tests 'launch-hook')
         if($LASTEXITCODE -ne 0){throw 'Isolated launch-preset hook test failed.'}
+        if([Diagnostics.FileVersionInfo]::GetVersionInfo($StreamerPath).FileVersion -eq '1.34.25.0'){
+            & $compiler /nologo /target:exe ('/out:'+(Join-Path $tests 'FovHookTest.exe')) (Join-Path $root 'src\RuntimeOverrides\FovHookTest.cs')
+            if($LASTEXITCODE -ne 0){throw 'FOV forwarding harness did not compile.'}
+            & (Join-Path $tests 'FovHookTest.exe') ([IO.Path]::GetFullPath($StreamerPath)) (Join-Path $tests 'fov-settings') (Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')
+            if($LASTEXITCODE -ne 0){throw 'Isolated FOV forwarding test failed.'}
+        }
         $oldData=$env:VD_LIBRARY_TEST_DATA;$oldDelay=$env:VD_LIBRARY_TEST_DELAYED;$oldLog=$env:VD_LIBRARY_OVERRIDE_LOG
         $oldFile=$env:VD_LIBRARY_OVERRIDES_FILE;$oldExpected=$env:VD_LIBRARY_TEST_EXPECTED_IDS
         try{
@@ -95,9 +101,10 @@ if(!$SkipTests){
     }
 }
 foreach($name in @('Virtual Desktop Unlock.exe','Virtual Desktop Unlock.dll','Virtual Desktop Unlock.deps.json','Virtual Desktop Unlock.runtimeconfig.json')){Copy-Item -LiteralPath (Join-Path $publish $name) -Destination $stage}
-Copy-Item -LiteralPath $hook -Destination $stage -Recurse
+New-Item -ItemType Directory -Path (Join-Path $stage 'runtime-override') -Force | Out-Null
+foreach($name in @('VirtualDesktop.LibraryOverrides.dll','VirtualDesktop.Streamer.exe.config','manifest.json')){Copy-Item -LiteralPath (Join-Path $hook $name) -Destination (Join-Path $stage 'runtime-override')}
 Get-ChildItem -LiteralPath (Join-Path $root 'scripts') -File | Copy-Item -Destination $stage
-foreach($name in @('README.md','LICENSE','CHANGELOG.md')){Copy-Item -LiteralPath (Join-Path $root $name) -Destination $stage}
+foreach($name in @('README.md','LICENSE','CHANGELOG.md','TESTING.md')){Copy-Item -LiteralPath (Join-Path $root $name) -Destination $stage}
 New-Item -ItemType Directory -Path (Join-Path $stage 'assets') -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $root 'assets\README.md') -Destination (Join-Path $stage 'assets\README.md')
 $zip=Join-Path $dist ('VirtualDesktopUnlock-v'+$version+'-win-x64.zip')

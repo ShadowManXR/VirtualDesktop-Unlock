@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Windows.Threading;
 using System.Xml;
 using System.Linq;
+using System.Globalization;
 using VirtualDesktop.Unlock;
 
 namespace VirtualDesktop.LibraryOverrides
@@ -21,7 +22,7 @@ namespace VirtualDesktop.LibraryOverrides
     public static class LaunchPresetRuntime
     {
         private static Func<object,Task> original;
-        private static FieldInfo platformField,idField,userSingleton,mobileSingleton;
+        private static FieldInfo platformField,idField,userSingleton,mobileSingleton,streamerSingleton;
         private static MethodInfo connectedGetter;
         private static Dispatcher dispatcher;
         private static Action<string> log;
@@ -53,6 +54,7 @@ namespace VirtualDesktop.LibraryOverrides
             original=CreateOriginalLauncher(game,state,stateField,builderField,gameField);
             userSingleton=FindSingleton(assembly.GetType("VirtualDesktop.Mobile.SharedUserSettings",true));
             mobileSingleton=FindSingleton(assembly.GetType("VirtualDesktop.Mobile.SharedMobileSettings",true));
+            streamerSingleton=FindSingleton(assembly.GetType("VirtualDesktop.Streamer.StreamerSettings",true));
             connectedGetter=(MethodInfo)assembly.ManifestModule.ResolveMethod(0x06021427);
             if(connectedGetter.IsStatic || connectedGetter.ReturnType!=typeof(bool) || connectedGetter.GetParameters().Length!=0)throw new MissingMethodException("Connection getter changed.");
             if(System.Windows.Application.Current==null)throw new InvalidOperationException("WPF application unavailable.");
@@ -97,24 +99,28 @@ namespace VirtualDesktop.LibraryOverrides
             return (Func<object,Task>)method.CreateDelegate(typeof(Func<object,Task>));
         }
 
-        public static int[] ReadPreset(int platform,ulong appId)
+        private static LaunchPreset ReadProfile(int platform,ulong appId)
         {
             if(platform!=1 || appId>UInt32.MaxValue)return null;
             var config=LaunchPresetConfiguration.Read(ConfigurationPath);LaunchPreset preset;
-            return config.Games.TryGetValue((uint)appId,out preset)?new[]{preset.Fps,preset.Quality}:null;
+            return config.Games.TryGetValue((uint)appId,out preset)?preset:null;
+        }
+        public static int[] ReadPreset(int platform,ulong appId)
+        {
+            var preset=ReadProfile(platform,appId);return preset==null?null:new[]{preset.Fps,preset.Quality};
         }
 
         public static Task Launch(object game)
         {
             int platform=Convert.ToInt32(platformField.GetValue(game));ulong id=Convert.ToUInt64(idField.GetValue(game));
             if(platform!=1)return original(game);
-            int[] preset;
-            try{preset=ReadPreset(platform,id);}
+            LaunchPreset preset;
+            try{preset=ReadProfile(platform,id);}
             catch(Exception e){log("Launch preset configuration rejected: "+e.Message);return Failed(e);}
             if(preset==null)return original(game);
             return LaunchWithPreset(game,preset);
         }
-        private static async Task LaunchWithPreset(object game,int[] preset)
+        private static async Task LaunchWithPreset(object game,LaunchPreset preset)
         {
             await gate.WaitAsync().ConfigureAwait(false);
             PresetRecoverySession session=null;
@@ -131,14 +137,14 @@ namespace VirtualDesktop.LibraryOverrides
                     log("Launch preset retained current settings for already running Steam "+id);await original(game).ConfigureAwait(false);return;
                 }
                 await OnDispatcher(delegate{
-                    var user=User();session=recovery.Begin(id,directory,Convert.ToInt32(Property(user,"VRFramerate")),Convert.ToInt32(Property(user,"VRGraphicsQuality")),preset[0],preset[1],DateTime.UtcNow);
+                    var user=User();session=recovery.Begin(id,directory,Convert.ToInt32(Property(user,"VRFramerate")),Convert.ToInt32(Property(user,"VRGraphicsQuality")),preset.Fps,preset.Quality,DateTime.UtcNow,preset.HorizontalFov.HasValue?(float?)Convert.ToSingle(Property(StreamerSettings(),"HorizontalFovTangent")):null,preset.VerticalFov.HasValue?(float?)Convert.ToSingle(Property(StreamerSettings(),"VerticalFovTangent")):null,preset.HorizontalFov,preset.VerticalFov);
                     ApplyPreset(preset);
                 }).ConfigureAwait(false);
                 // VD exposes no client acknowledgement here. Allow transport/UI to
                 // settle, then verify the selection has not changed before launch.
                 await Task.Delay(1000).ConfigureAwait(false);
                 await OnDispatcher(delegate{CheckPreset(preset);}).ConfigureAwait(false);
-                log("Launch preset releasing Steam "+idField.GetValue(game)+"; fps="+preset[0]+"; quality="+preset[1]+"; utc="+DateTime.UtcNow.ToString("O"));
+                log("Launch preset releasing Steam "+idField.GetValue(game)+"; fps="+preset.Fps+"; quality="+preset.Quality+"; horizontalFov="+FovText(preset.HorizontalFov)+"; verticalFov="+FovText(preset.VerticalFov)+"; utc="+DateTime.UtcNow.ToString("O"));
                 await original(game).ConfigureAwait(false);
                 try{await ObserveRecovery().ConfigureAwait(false);}catch(Exception observation){RecoveryError(observation);}
               }catch(Exception e){failure=e;}
@@ -162,7 +168,7 @@ namespace VirtualDesktop.LibraryOverrides
         }
         private static void RestoreReady()
         {
-            recovery.RestoreReady(delegate{var user=User();return new[]{Convert.ToInt32(Property(user,"VRFramerate")),Convert.ToInt32(Property(user,"VRGraphicsQuality"))};},delegate(int value){Set(User(),"VRFramerate",value);},delegate(int value){Set(User(),"VRGraphicsQuality",value);});
+            recovery.RestoreReady(delegate{var user=User();return new[]{Convert.ToInt32(Property(user,"VRFramerate")),Convert.ToInt32(Property(user,"VRGraphicsQuality"))};},delegate(int value){Set(User(),"VRFramerate",value);},delegate(int value){Set(User(),"VRGraphicsQuality",value);},delegate{var settings=StreamerSettings();return new[]{Convert.ToSingle(Property(settings,"HorizontalFovTangent")),Convert.ToSingle(Property(settings,"VerticalFovTangent"))};},delegate(float value){Set(StreamerSettings(),"HorizontalFovTangent",value);},delegate(float value){Set(StreamerSettings(),"VerticalFovTangent",value);});
         }
         private static void RecoveryError(Exception error)
         {
@@ -190,17 +196,22 @@ namespace VirtualDesktop.LibraryOverrides
             if(client==null || !(bool)connectedGetter.Invoke(client,null))throw new InvalidOperationException("Headset disconnected; launch preset not applied.");
             return user;
         }
-        private static void ApplyPreset(int[] preset)
+        private static void ApplyPreset(LaunchPreset preset)
         {
-            var user=User();Set(user,"VRGraphicsQuality",preset[1]);Set(user,"VRFramerate",preset[0]);
-            log("Launch preset applied before game launch; fps="+preset[0]+"; quality="+preset[1]+"; utc="+DateTime.UtcNow.ToString("O"));
+            var user=User();Set(user,"VRGraphicsQuality",preset.Quality);Set(user,"VRFramerate",preset.Fps);
+            if(preset.HorizontalFov.HasValue)Set(StreamerSettings(),"HorizontalFovTangent",preset.HorizontalFov.Value);
+            if(preset.VerticalFov.HasValue)Set(StreamerSettings(),"VerticalFovTangent",preset.VerticalFov.Value);
+            log("Launch preset applied before game launch; fps="+preset.Fps+"; quality="+preset.Quality+"; horizontalFov="+FovText(preset.HorizontalFov)+"; verticalFov="+FovText(preset.VerticalFov)+"; utc="+DateTime.UtcNow.ToString("O"));
         }
-        private static void CheckPreset(int[] preset)
+        private static void CheckPreset(LaunchPreset preset)
         {
-            var user=User();if(Convert.ToInt32(Property(user,"VRFramerate"))!=preset[0] || Convert.ToInt32(Property(user,"VRGraphicsQuality"))!=preset[1])throw new InvalidOperationException("VD preset changed during launch preparation; try again.");
+            var user=User();if(Convert.ToInt32(Property(user,"VRFramerate"))!=preset.Fps || Convert.ToInt32(Property(user,"VRGraphicsQuality"))!=preset.Quality)throw new InvalidOperationException("VD preset changed during launch preparation; try again.");
+            if((preset.HorizontalFov.HasValue&&!LaunchPresetRecovery.Near(Convert.ToSingle(Property(StreamerSettings(),"HorizontalFovTangent")),preset.HorizontalFov.Value))||(preset.VerticalFov.HasValue&&!LaunchPresetRecovery.Near(Convert.ToSingle(Property(StreamerSettings(),"VerticalFovTangent")),preset.VerticalFov.Value)))throw new InvalidOperationException("FOV tangent changed during launch preparation; try again.");
         }
+        private static object StreamerSettings(){var settings=streamerSingleton.GetValue(null);if(settings==null)throw new InvalidOperationException("Streamer FOV settings unavailable.");return settings;}
+        private static string FovText(float? value){return value.HasValue?value.Value.ToString("R",CultureInfo.InvariantCulture):"unchanged";}
         private static object Property(object value,string name){return value.GetType().GetProperty(name).GetValue(value,null);}
-        private static void Set(object value,string name,int setting){var p=value.GetType().GetProperty(name);p.SetValue(value,Enum.ToObject(p.PropertyType,setting),null);}
+        private static void Set(object value,string name,object setting){var p=value.GetType().GetProperty(name);p.SetValue(value,p.PropertyType.IsEnum?Enum.ToObject(p.PropertyType,setting):Convert.ChangeType(setting,p.PropertyType,CultureInfo.InvariantCulture),null);}
         private static FieldInfo FindSingleton(Type t){for(;t!=null;t=t.BaseType){var f=t.GetField("<Default>k__BackingField",BindingFlags.Static|BindingFlags.NonPublic|BindingFlags.DeclaredOnly);if(f!=null)return f;}throw new MissingFieldException("Settings singleton");}
         private static Task Failed(Exception e){var completion=new TaskCompletionSource<bool>();completion.SetException(e);return completion.Task;}
         [DllImport("kernel32.dll",SetLastError=true)]private static extern bool VirtualProtect(IntPtr address,UIntPtr size,uint protection,out uint old);

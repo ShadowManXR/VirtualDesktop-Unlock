@@ -47,7 +47,7 @@
   "Launch requested through Steam  ·  {0}": "Steam 실행 요청  ·  {0}",
   "Launch automatically when Windows starts": "Windows 시작 시 자동 실행",
   "Show in system tray (close window to tray)": "닫을 때 시스템 트레이에 표시",
-  "Enable higher bitrate limits": "더 높은 비트레이트 제한 사용",
+  "Enable higher bitrate limits * Experimental": "더 높은 비트레이트 제한 사용 * 실험적",
   "Done": "완료",
   "Cancel": "취소",
   "Save profiles": "프로필 저장",
@@ -140,5 +140,9 @@
   "Launch Preset": "실행 프리셋",
   "Launch Preset — Virtual Desktop Unlock": "실행 프리셋 — Virtual Desktop Unlock",
   "Save preset": "프리셋 저장",
-  "Apply this preset before launching this game from VD.": "VD에서 이 게임을 실행하기 전에 적용합니다."
+  "Apply this preset before launching this game from VD.": "VD에서 이 게임을 실행하기 전에 적용합니다.",
+  "Override FOV tangent (experimental)": "FOV 탄젠트 변경 (실험적)",
+  "Horizontal FOV tangent": "수평 FOV 탄젠트",
+  "Vertical FOV tangent": "수직 FOV 탄젠트",
+  "{0}%": "{0}%"
 }
