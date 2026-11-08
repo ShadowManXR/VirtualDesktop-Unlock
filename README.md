@@ -15,8 +15,6 @@ An unofficial program for extending Virtual Desktop Streaming. Add custom Steam 
 | Optional integration | Adds custom Steam IDs to Streamer's game discovery. Supports verified Streamer **1.34.23.0** and **1.34.25.0** binaries with helper 0.2.0.0. RE3 and Gothic were previously confirmed in the headset on 1.34.23.0. |
 | Virtual Desktop Unlock app | Add/Remove buttons, search, saving, and per-game launch presets. Custom additions sync to the helper's shared configuration. Restart Streamer and reconnect the headset to apply changes. |
 
-**Both the app and helper must be version 0.1.1 or later for selection syncing.** Version 0.1.0's helper added only RE3. Removing an entry removes its custom override; native VR titles can still appear automatically through Steam metadata. Adding a game does not install or enable a VR mod.
-
 When the saved selection differs from the running helper's confirmed selection, a **Restart Streamer and reconnect to apply custom additions** link appears below the lists. Click it to close and relaunch Streamer; Windows may request administrator permission. The link clears after the helper confirms the selection. Reconnect the headset and reopen Games afterward. The app also detects restarts performed outside the app; failed or cancelled restarts leave the link available to retry.
 
 ## Download and run
