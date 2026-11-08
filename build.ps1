@@ -2,7 +2,7 @@
 param([string]$StreamerPath,[switch]$SkipTests)
 $ErrorActionPreference='Stop'
 $root=$PSScriptRoot
-$version='0.1.7'
+$version='0.1.8'
 $env:DOTNET_CLI_HOME=Join-Path $root '.dotnet-build'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'
 $env:DOTNET_GENERATE_ASPNET_CERTIFICATE='false'
@@ -13,16 +13,20 @@ $tests=Join-Path $work 'runtime-tests'
 $stage=Join-Path $work ('VirtualDesktopUnlock-v'+$version+'-win-x64')
 $dist=Join-Path $root 'artifacts\dist'
 foreach($path in @($publish,$hook,$tests,$stage,$dist)){New-Item -ItemType Directory -Path $path -Force | Out-Null}
-& dotnet publish (Join-Path $root 'SteamVRLibrary\SteamVRLibrary.csproj') -c Release -o $publish --configfile (Join-Path $root 'NuGet.Config')
+& dotnet publish (Join-Path $root 'SteamVRLibrary\SteamVRLibrary.csproj') -c Release -o $publish ('-p:OutputPath='+(Join-Path $work 'app-build')) --configfile (Join-Path $root 'NuGet.Config')
 if($LASTEXITCODE -ne 0){throw 'Companion app build failed.'}
 $compiler=Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $framework=Split-Path -Parent $compiler
 $references=@("/reference:$framework\WPF\PresentationFramework.dll","/reference:$framework\WPF\WindowsBase.dll",'/reference:System.Xaml.dll')
-& $compiler /nologo /target:library ('/out:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) $references (Join-Path $root 'src\RuntimeOverrides\LibraryOverrides.cs') (Join-Path $root 'src\RuntimeOverrides\BitrateRuntime.cs') (Join-Path $root 'Shared\BitrateConfiguration.cs')
+& $compiler /nologo /target:library ('/out:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) $references (Join-Path $root 'src\RuntimeOverrides\LibraryOverrides.cs') (Join-Path $root 'src\RuntimeOverrides\BitrateRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRuntime.cs') (Join-Path $root 'Shared\LaunchPresetConfiguration.cs') (Join-Path $root 'Shared\BitrateConfiguration.cs')
 if($LASTEXITCODE -ne 0){throw 'Runtime helper build failed.'}
 Copy-Item -LiteralPath (Join-Path $root 'src\RuntimeOverrides\RuntimeHook.config') -Destination (Join-Path $hook 'VirtualDesktop.Streamer.exe.config')
 [pscustomobject]@{Version=$version;StreamerVersion='1.34.25.0';StreamerSHA256='0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8';SupportedStreamers=@(@{Version='1.34.23.0';SHA256='FEAD548C57DF539006E6C97A7A29D46FDE172F756F40D65DBDB77ABAAFA3AEAD'},@{Version='1.34.25.0';SHA256='0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8'});HelperSHA256=(Get-FileHash -LiteralPath (Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')).Hash;ConfigSHA256=(Get-FileHash -LiteralPath (Join-Path $hook 'VirtualDesktop.Streamer.exe.config')).Hash} | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $hook 'manifest.json')
 if(!$SkipTests){
+    & $compiler /nologo /optimize+ /target:exe ('/out:'+(Join-Path $hook 'LaunchPresetTests.exe')) ('/reference:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) (Join-Path $root 'src\RuntimeOverrides\LaunchPresetTests.cs')
+    if($LASTEXITCODE -ne 0){throw 'Launch-preset tests did not compile.'}
+    & (Join-Path $hook 'LaunchPresetTests.exe') (Join-Path $tests 'launch-presets')
+    if($LASTEXITCODE -ne 0){throw 'Launch-preset tests failed.'}
     $test=Start-Process -FilePath (Join-Path $publish 'Virtual Desktop Unlock.exe') -ArgumentList '--self-test' -WindowStyle Hidden -PassThru
     $test.WaitForExit()
     Get-Content -LiteralPath (Join-Path $publish 'self-test-result.txt') | Write-Output
@@ -34,6 +38,10 @@ if(!$SkipTests){
     & (Join-Path $tests 'RuntimeHookTest.exe')
     if($LASTEXITCODE -ne 0){throw 'AppDomain startup-loading smoke test failed.'}
     if($StreamerPath){
+        & $compiler /nologo /target:exe ('/out:'+(Join-Path $hook 'LaunchPresetHookTest.exe')) $references ('/reference:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) (Join-Path $root 'src\RuntimeOverrides\LaunchPresetHookTest.cs')
+        if($LASTEXITCODE -ne 0){throw 'Launch-preset hook harness did not compile.'}
+        & (Join-Path $hook 'LaunchPresetHookTest.exe') ([IO.Path]::GetFullPath($StreamerPath)) (Join-Path $tests 'launch-hook')
+        if($LASTEXITCODE -ne 0){throw 'Isolated launch-preset hook test failed.'}
         $oldData=$env:VD_LIBRARY_TEST_DATA;$oldDelay=$env:VD_LIBRARY_TEST_DELAYED;$oldLog=$env:VD_LIBRARY_OVERRIDE_LOG
         $oldFile=$env:VD_LIBRARY_OVERRIDES_FILE;$oldExpected=$env:VD_LIBRARY_TEST_EXPECTED_IDS
         try{

@@ -1,11 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.1.8 — 2026-11-08
 
 - Highlight cached games in blue only when Steam's original metadata identifies them as VR titles; keep custom additions in the normal text color.
 - Highlight selected games absent from VD's cache in orange and update their colors automatically as the cache changes.
 - Read Steam's local app metadata independently of the helper's forced OpenXR flags, with parser and UI regression checks.
 - Add a headset Games panel screenshot to the README.
+
+- Add automatic per-game FPS and graphics-quality launch presets for the verified Streamer 1.34.25.0 / Quest 3 setup.
+- Add the selected-game Launch Preset editor with discrete quality and FPS sliders. New presets start disabled; existing saved presets are preserved.
+- Remove the Undo and Launch selected buttons.
+- Update the companion app and startup helper to version 0.1.8.
 
 ## 0.1.7 — 2026-10-23
 

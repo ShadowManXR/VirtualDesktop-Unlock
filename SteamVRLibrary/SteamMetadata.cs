@@ -5,7 +5,7 @@ namespace SteamVRLibrary;
 // Read Steam's original flags: VD's persisted OpenXRSupport also includes our overrides.
 internal static class SteamMetadata
 {
-    public static HashSet<string> ReadVrIds(string path, HashSet<string> candidates)
+    public static HashSet<string> ReadVrIds(string path, HashSet<string> candidates, Dictionary<string,string>? names = null)
     {
         HashSet<string> result = [];
         if (!File.Exists(path) || candidates.Count == 0) return result;
@@ -40,7 +40,7 @@ internal static class SteamMetadata
             if (candidates.Contains(key))
             {
                 stream.Position += headerSize;
-                if (ReadObject(reader, end, strings, "", 0)) result.Add(key);
+                if (ReadObject(reader, end, strings, "", 0, name => { if(names!=null)names[key]=name; })) result.Add(key);
             }
             stream.Position = end;
         }
@@ -59,7 +59,7 @@ internal static class SteamMetadata
         throw new InvalidDataException("Unterminated Steam metadata string.");
     }
 
-    private static bool ReadObject(BinaryReader reader, long end, string[]? strings, string parent, int depth)
+    private static bool ReadObject(BinaryReader reader, long end, string[]? strings, string parent, int depth, Action<string>? appName = null)
     {
         if (depth > 64) throw new InvalidDataException("Steam metadata nesting is too deep.");
         var found = false;
@@ -79,9 +79,10 @@ internal static class SteamMetadata
             var vrFlag = path is "appinfo/common/openvrsupport" or "appinfo/common/openxrsupport" or "appinfo/common/othervrsupport";
             switch (type)
             {
-                case 0: found |= ReadObject(reader, end, strings, path, depth + 1); break;
+                case 0: found |= ReadObject(reader, end, strings, path, depth + 1, appName); break;
                 case 1:
                     var text = ReadString(reader, end);
+                    if(path=="appinfo/common/name")appName?.Invoke(text);
                     found |= vrFlag && (text == "1" || text.Equals("true", StringComparison.OrdinalIgnoreCase));
                     break;
                 case 2: found |= reader.ReadInt32() != 0 && vrFlag; break;

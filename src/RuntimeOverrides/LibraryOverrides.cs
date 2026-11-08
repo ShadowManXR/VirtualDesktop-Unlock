@@ -8,9 +8,9 @@ using System.Collections.Generic;
 using System.Xml;
 using System.Security.Cryptography;
 
-[assembly: AssemblyVersion("0.1.6.0")]
+[assembly: AssemblyVersion("0.1.8.0")]
 [assembly: AssemblyTitle("Virtual Desktop Library Overrides")]
-[assembly: AssemblyFileVersion("0.1.6.0")]
+[assembly: AssemblyFileVersion("0.1.8.0")]
 
 namespace VirtualDesktop.LibraryOverrides
 {
@@ -95,6 +95,8 @@ namespace VirtualDesktop.LibraryOverrides
                     {
                         try { BitrateRuntime.Install(assembly,Log); }
                         catch (Exception e) { Log("Bitrate hook unavailable; original bitrate behavior retained: "+e); }
+                        try { LaunchPresetRuntime.Install(assembly,Log); }
+                        catch (Exception e) { Log("Launch presets unavailable; original launch behavior retained: "+e); }
                     }
                     return;
                 }

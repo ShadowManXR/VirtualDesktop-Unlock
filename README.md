@@ -2,7 +2,7 @@
 
 # Virtual Desktop Unlock
 
-**v0.1.7** · Windows x64 · Unofficial · MIT
+**v0.1.8** · Windows x64 · Unofficial · MIT
 
 An unofficial program for extending Virtual Desktop Streaming. Add custom Steam games, including games that use third-party VR mods, to Virtual Desktop's actual headset Games tab using the optional runtime helper. The desktop companion app organizes your installed Steam games, saves selections for the helper, and provides optional headset-specific bitrate ceilings.
 
@@ -12,8 +12,8 @@ An unofficial program for extending Virtual Desktop Streaming. Add custom Steam 
 
 | Feature | Result |
 |---|---|
-| Optional integration | Adds custom Steam IDs to Streamer's game discovery. Supports verified Streamer **1.34.23.0** and **1.34.25.0** binaries with helper 0.1.6.0. RE3 and Gothic were previously confirmed in the headset on 1.34.23.0. |
-| Virtual Desktop Unlock app | Add/Remove buttons, search, saving, Undo, and Steam launching. Custom additions sync to the helper's shared configuration. Restart Streamer and reconnect the headset to apply changes. |
+| Optional integration | Adds custom Steam IDs to Streamer's game discovery. Supports verified Streamer **1.34.23.0** and **1.34.25.0** binaries with helper 0.1.8.0. RE3 and Gothic were previously confirmed in the headset on 1.34.23.0. |
+| Virtual Desktop Unlock app | Add/Remove buttons, search, saving, and per-game launch presets. Custom additions sync to the helper's shared configuration. Restart Streamer and reconnect the headset to apply changes. |
 
 **Both the app and helper must be version 0.1.1 or later for selection syncing.** Version 0.1.0's helper added only RE3. Removing an entry removes its custom override; native VR titles can still appear automatically through Steam metadata. Adding a game does not install or enable a VR mod.
 
@@ -28,6 +28,22 @@ Version 0.1.6 adds game-library support for Streamer 1.34.25.0. That Streamer up
 Use the gear beside **Virtual Desktop Unlock** to open Settings. **Launch automatically when Windows starts** saves immediately for the current Windows user. Keep the app in its current folder, or disable and enable this option after moving it.
 
 The app supports English, Russian, French, German, Spanish, Chinese (Simplified), Japanese, Korean, Hindi and Arabic. On first launch it selects the current Windows display language if supported, otherwise English. Regional variants map to their supported language (for example, French Canada uses French). Change **Language** in Settings to apply a new language immediately; your choice is saved in `%APPDATA%\Virtual Desktop Unlock\Language.json` and takes precedence on subsequent launches. Arabic uses a mirrored right-to-left layout. Game titles, product names and codec identifiers remain unchanged. Localization does not require a helper reinstall.
+
+## Launch presets
+
+Select exactly one game in the right-hand **VD cache games** list, then click **Launch Preset**. The button remains disabled with no selection, multiple selections, or a selection in the left-hand Steam list. The editor shows the selected game's name, quality/resolution slider, and discrete FPS slider.
+
+For a game without a saved preset, **Use preset** starts unchecked and both sliders are disabled. Check it, adjust the sliders, and choose **Save preset**. Existing saved presets load enabled with their saved values. Clear **Use preset** and save to remove that game's override. Cancel discards edits, and saving changes only the selected game's preset. Changes are stored atomically in `%APPDATA%\Virtual Desktop Unlock\LaunchPresets.xml` and read on the next VD launch without restarting the updated helper:
+
+```xml
+<LaunchPresets version="1">
+  <Game platform="Steam" appId="2981220" fps="144" quality="0" />
+</LaunchPresets>
+```
+
+`quality="0"` means Low. The launch hook supports the verified x64 Streamer **1.34.25.0** binary and Quest 3, and requires the updated helper containing `LaunchPresetRuntime`; older released helpers do not implement it. It applies the settings before entering VD's original launcher, waits one second for synchronization, and checks that the PC selection remains unchanged. There is no protocol acknowledgement from the headset on this path, so the delay alone is not proof of headset readiness. If headset settings are unavailable or change during preparation, the configured launch is cancelled and the reason is written to `%PROGRAMDATA%\Virtual Desktop\LibraryOverrides.log`. Unconfigured games retain VD's original launch behavior.
+
+The selected settings remain after the game exits. Manual changes are allowed; each game's preset is reapplied on its next launch. Uncheck the game and save to disable its preset. This covers VD's Games tab, not launches made directly through Steam or the companion app's Steam launch button. Forefront has been verified live; other configured Steam identities follow the same path and are covered by isolated hook tests.
 
 ## Higher bitrate limits
 

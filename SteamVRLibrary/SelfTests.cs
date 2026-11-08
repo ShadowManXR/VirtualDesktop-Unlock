@@ -90,7 +90,6 @@ internal static class SelfTests
                 var right = controls.OfType<ListView>().Single(x => x.AccessibleName == "VD cache games");
                 var addButton = controls.OfType<Button>().Single(x => x.Text.StartsWith("Add to VR"));
                 var removeButton = controls.OfType<Button>().Single(x => x.Text == "←  Remove");
-                var undoButton = controls.OfType<Button>().Single(x => x.Text == "Undo move");
                 var search = controls.OfType<TextBox>().Single();
                 var banner = controls.OfType<Label>().Single(x => x.AccessibleName == "Virtual Desktop status");
                 Check(form.Text.StartsWith("Virtual Desktop Unlock") && controls.OfType<Label>().Any(x => x.Text == "VD cache games")
@@ -111,12 +110,23 @@ internal static class SelfTests
                 Check(!VirtualDesktop.Unlock.BitrateConfiguration.Read(bitratePath).Enabled && bitrateButton.Text == "Remove bitrate limits", "Main bitrate button restores stock limits persistently");
                 var restart = controls.OfType<LinkLabel>().Single(x => x.AccessibleName == "Restart Streamer");
                 Check(left.Items.Count == 1 && right.Items.Count == 1, "UI seeds only installed cached VR games");
+                var presetButton=controls.OfType<Button>().Single(x=>x.Text=="Launch Preset");
+                Check(!presetButton.Enabled,"Launch Preset starts disabled without a right-list selection");
+                left.Items[0].Selected=true;
+                Check(!presetButton.Enabled,"Steam-list selection does not enable Launch Preset");
+                right.Items[0].Selected=true;
+                Check(presetButton.Enabled,"Exactly one selected VD cache game enables Launch Preset");
+                right.Items[0].Selected=false;
+                Check(!presetButton.Enabled,"Clearing the VD cache selection disables Launch Preset");
                 Check(right.Items[0].ForeColor == Color.FromArgb(105,177,255) && left.Items[0].ForeColor == left.ForeColor,
                     "Only VD cache rows backed by original Steam VR metadata appear blue");
                 left.Items[0].Selected = true; addButton.PerformClick();
                 Check(left.Items.Count == 0 && right.Items.Count == 2 && new LibraryStore(uiPath).Load()!.Games.Count == 2, "Add button moves RE3 and persists the selection");
                 Check(right.Items.Cast<ListViewItem>().Single(x => ((Game)x.Tag!).Id == "952060").ForeColor == Color.FromArgb(255,192,105),
                     "A selected game absent from the VD cache appears orange");
+                foreach(ListViewItem item in right.Items)item.Selected=true;
+                Check(!presetButton.Enabled,"Multiple VD cache selections disable Launch Preset");
+                foreach(ListViewItem item in right.Items)item.Selected=false;
                 form.LoadPreview(scan with { CachedVrIds = scan.CachedVrIds.Append("952060").ToHashSet() });
                 Check(right.Items.Cast<ListViewItem>().Single(x => ((Game)x.Tag!).Id == "952060").ForeColor == right.ForeColor,
                     "A custom game returns to normal text once VD caches it");
@@ -143,10 +153,8 @@ internal static class SelfTests
                 Check(left.Items.Count == 1 && right.Items.Count == 1 && new LibraryStore(uiPath).Load()!.Games.Count == 1, "Remove button moves RE3 back and saves");
                 Check(ReadSharedIds(uiShared).SequenceEqual(["111"]), "Remove button removes the custom helper override");
                 Check(restart.Visible, "Removal also requires a Streamer restart");
-                undoButton.PerformClick();
-                Check(right.Items.Count == 2 && new LibraryStore(uiPath).Load()!.Games.Count == 2, "Undo restores and saves the prior selection");
-                Check(ReadSharedIds(uiShared).SequenceEqual(["111", "952060"]), "Undo also restores the helper override");
-                Check(!restart.Visible, "Undo back to the live selection clears the restart message");
+                left.Items.Cast<ListViewItem>().Single(x => ((Game)x.Tag!).Id == "952060").Selected = true;
+                addButton.PerformClick();
                 search.Text = "952060";
                 Check(right.Items.Count == 1 && ((Game)right.Items[0].Tag!).Id == "952060", "Search filters by Steam ID");
                 search.Clear();
@@ -258,6 +266,7 @@ internal static class SelfTests
                 exitForm.ShowInTaskbar = false; exitForm.Show(); Application.DoEvents(); exitForm.ExitApplication();
                 Check(exitForm.IsDisposed, "Tray Exit closes the application even when tray mode is enabled");
             }
+            LaunchPresetTests.Run(root, Check);
             LocalizationTests.Run(root, Check);
             File.WriteAllLines(Path.Combine(root, "results.txt"), checks);
             File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "self-test-result.txt"), string.Join(Environment.NewLine, checks));

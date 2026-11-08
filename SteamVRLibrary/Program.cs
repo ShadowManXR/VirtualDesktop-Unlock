@@ -11,6 +11,13 @@ internal static class Program
         ApplicationConfiguration.Initialize();
         if (args.Contains("--self-test")) return SelfTests.Run();
         Localizer.Initialize();
+        if (args.Length == 2 && args[0] == "--render-launch-presets")
+        {
+            var games = SteamScanner.Scan().Games;
+            using var form = new LaunchPresetsForm(games.FirstOrDefault(g => g.Id == "2981220") ?? games.First(), new LaunchPresetStore(VirtualDesktop.Unlock.LaunchPresetConfiguration.DefaultPath));
+            form.ShowInTaskbar = false; form.StartPosition = FormStartPosition.Manual; form.Location = new Point(-20000,-20000); form.Show(); Application.DoEvents();
+            using var bitmap = new Bitmap(form.Width,form.Height); form.DrawToBitmap(bitmap,new Rectangle(Point.Empty,form.Size)); bitmap.Save(args[1]);return 0;
+        }
         if (args.Length == 2 && args[0] == "--render-preview")
         {
             using var form = new LibraryForm(preview: true);
@@ -74,6 +81,8 @@ public sealed class LibraryForm : Form
     private readonly BitratePreferences bitratePreferences;
     private readonly Button bitrate = MakeButton("Remove bitrate limits", primary: true);
     private readonly Button bitrateProfiles = MakeButton("Bitrate profiles…");
+    private readonly Button launchPresets = MakeButton("Launch Preset");
+    private readonly LaunchPresetStore launchPresetStore;
     private readonly Label bitrateStatus = TextLabel("Stock bitrate limits", Muted, 9);
     private readonly NotifyIcon trayIcon = new();
     private readonly StatusIcons statusIcons = new();
@@ -95,15 +104,12 @@ public sealed class LibraryForm : Form
     private uint[]? syncedIds;
     private readonly Button add = MakeButton("Add to VR  →", primary: true);
     private readonly Button remove = MakeButton("←  Remove");
-    private readonly Button launch = MakeButton("Launch selected");
-    private readonly Button undo = MakeButton("Undo move");
     private readonly Button refresh = MakeButton("Refresh");
     private readonly Button details = MakeButton("Scan details");
     private readonly ToolTip tip = new() { AutoPopDelay = 10000 };
     private ColumnStyle transferColumn = null!;
     private ScanResult scan = new([], [], []);
     private LibraryState state = new();
-    private LibraryState? previous;
     private bool updating;
     private bool ready;
     private bool busy;
@@ -113,6 +119,8 @@ public sealed class LibraryForm : Form
         this.preview = preview;
         this.streamerControl = streamerControl ?? new StreamerControl();
         store = new LibraryStore(libraryPath ?? Path.Combine(AppContext.BaseDirectory, "Data", "library.json"));
+        launchPresetStore = new LaunchPresetStore(preview || libraryPath != null
+            ? Path.Combine(Path.GetDirectoryName(store.Path)!, "LaunchPresets.xml") : VirtualDesktop.Unlock.LaunchPresetConfiguration.DefaultPath);
         this.traySettings = traySettings ?? new TraySettings(preview || libraryPath != null
             ? Path.Combine(Path.GetDirectoryName(store.Path)!, "Settings.json") : TraySettings.DefaultPath);
         bitratePreferences = new BitratePreferences(preview || libraryPath != null
@@ -121,7 +129,7 @@ public sealed class LibraryForm : Form
         Localizer.Changed += LanguageChanged;
         sharedOverrides = new SharedOverrides(preview || libraryPath != null
             ? Path.Combine(Path.GetDirectoryName(store.Path)!, "GameOverrides.xml") : SharedOverrides.DefaultPath);
-        Text = "Virtual Desktop Unlock — v0.1.7";
+        Text = "Virtual Desktop Unlock — v0.1.8";
         Icon = statusIcons[ConnectionIcon.Unloaded];
         trayIcon.Icon = Icon;
         trayIcon.Text = "Virtual Desktop Unlock";
@@ -218,8 +226,20 @@ public sealed class LibraryForm : Form
         root.Controls.Add(lists, 0, 4);
 
         var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(0, 12, 0, 0), WrapContents = false, Margin = Padding.Empty };
-        launch.Width = 154; undo.Width = 116; details.Width = 110;
-        actions.Controls.AddRange([launch, undo, details]);
+        details.Width = 110;
+        launchPresets.Width = 160;
+        actions.Controls.AddRange([launchPresets, details]);
+        launchPresets.Click += (_, _) =>
+        {
+            if (!ready || busy || vr.SelectedItems.Count != 1) return;
+            try
+            {
+                var game = (Game)vr.SelectedItems[0].Tag!;
+                using var dialog = new LaunchPresetsForm(game, launchPresetStore) { Icon = Icon };
+                if (dialog.ShowDialog(this) == DialogResult.OK) Localizer.SetText(status, "Launch presets saved. Applied the next time each game launches from VD.");
+            }
+            catch (Exception e) { LocalizedMessageBox.Show(this, e.Message, "Could not open launch presets", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+        };
         bitrate.AccessibleName = "Toggle bitrate limits";
         bitrate.Click += (_, _) =>
         {
@@ -241,15 +261,12 @@ public sealed class LibraryForm : Form
         vr.AccessibleName = "VD cache games";
         Localizer.SetToolTip(tip, add, "Add selected games to the headset library. Restart Streamer to apply.");
         Localizer.SetToolTip(tip, remove, "Remove custom additions. Native VR games may still appear automatically.");
-        Localizer.SetToolTip(tip, launch, "Launch through Steam. Connect Virtual Desktop first and install any required VR mod yourself.");
         search.TextChanged += (_, _) => Populate();
         steam.SelectedIndexChanged += (_, _) => SelectionChanged(steam, vr);
         vr.SelectedIndexChanged += (_, _) => SelectionChanged(vr, steam);
         add.Click += (_, _) => MoveGames(true);
         remove.Click += (_, _) => MoveGames(false);
-        undo.Click += (_, _) => Undo();
         refresh.Click += async (_, _) => await ReloadAsync();
-        launch.Click += (_, _) => LaunchSelected();
         steam.DoubleClick += (_, _) => MoveGames(true);
         vr.DoubleClick += (_, _) => MoveGames(false);
         details.Click += (_, _) => LocalizedMessageBox.Show(this,
@@ -309,7 +326,7 @@ public sealed class LibraryForm : Form
                 saved = new LibraryState { Games = next.Games.Where(g => next.CachedVrIds.Contains(g.Id)).Select(g => g with { Origin = "Imported from Virtual Desktop cache" }).ToList() };
                 store.Save(saved);
             }
-            scan = next; state = saved; previous = null; ready = true;
+            scan = next; state = saved; ready = true;
             Populate();
             SyncOverrides("Loaded library");
         }
@@ -398,10 +415,9 @@ public sealed class LibraryForm : Form
         UpdateRestartNotice();
         restart.Enabled = ready && !busy;
         bitrate.Enabled = bitrateProfiles.Enabled = !busy;
+        launchPresets.Enabled = ready && !busy && vr.SelectedItems.Count == 1;
         add.Enabled = ready && !busy && steam.SelectedItems.Count > 0;
         remove.Enabled = ready && !busy && vr.SelectedItems.Count > 0;
-        launch.Enabled = ready && !busy && steam.SelectedItems.Count + vr.SelectedItems.Count == 1;
-        undo.Enabled = ready && !busy && previous != null;
         refresh.Enabled = !busy;
         search.Enabled = ready && !busy;
     }
@@ -417,17 +433,10 @@ public sealed class LibraryForm : Form
             : state.Games.Where(g => !ids.Contains(g.Id)).ToList() };
         try
         {
-            store.Save(next); previous = state; state = next; Populate();
+            store.Save(next); state = next; Populate();
             SyncOverrides(toVr ? "Saved additions: {0}" : "Saved removals: {0}",selected.Count);
         }
         catch (Exception e) { LocalizedMessageBox.Show(this, e.Message, "Could not save — move cancelled", MessageBoxButtons.OK, MessageBoxIcon.Error); }
-    }
-
-    private void Undo()
-    {
-        if (previous == null || busy) return;
-        try { store.Save(previous); state = previous; previous = null; Populate(); SyncOverrides("Last move undone"); }
-        catch (Exception e) { LocalizedMessageBox.Show(this, e.Message, "Could not undo", MessageBoxButtons.OK, MessageBoxIcon.Error); }
     }
 
     private void SyncOverrides(string action, params object[] args)
@@ -496,14 +505,6 @@ public sealed class LibraryForm : Form
         finally { busy = false; UpdateButtons(); UpdateRestartNotice(); }
     }
 
-    private void LaunchSelected()
-    {
-        var selection = steam.SelectedItems.Cast<ListViewItem>().Concat(vr.SelectedItems.Cast<ListViewItem>()).ToList();
-        if (selection.Count != 1 || selection[0].Tag is not Game game) return;
-        try { Process.Start(new ProcessStartInfo($"steam://rungameid/{game.Id}") { UseShellExecute = true }); Localizer.SetText(status,"Launch requested through Steam  ·  {0}",game.Name); }
-        catch (Exception e) { LocalizedMessageBox.Show(this, e.Message, "Could not launch Steam", MessageBoxButtons.OK, MessageBoxIcon.Error); }
-    }
-
     public void RestoreAndActivate()
     {
         if (IsDisposed || Disposing) return;
@@ -556,7 +557,8 @@ public sealed class LibraryForm : Form
     {
         int WidthFor(Button b) => TextRenderer.MeasureText(b.Text,b.Font).Width+24;
         transferColumn.Width = Math.Max(154,Math.Max(WidthFor(add),WidthFor(remove))+24);
-        launch.Width=Math.Max(154,WidthFor(launch));undo.Width=Math.Max(116,WidthFor(undo));details.Width=Math.Max(110,WidthFor(details));
+        details.Width=Math.Max(110,WidthFor(details));
+        launchPresets.Width=Math.Max(160,WidthFor(launchPresets));
         int statusWidth=Math.Max(105,Math.Max(TextRenderer.MeasureText(Localizer.T("Installed"),steam.Font).Width,TextRenderer.MeasureText(Localizer.T("Not installed"),steam.Font).Width)+18);
         foreach(var list in new[]{steam,vr}) { list.Columns[1].Width=statusWidth;list.Columns[0].Width=Math.Max(180,list.ClientSize.Width-statusWidth); }
         MinimumSize=new Size(Math.Max(990,bitrate.PreferredSize.Width+bitrateProfiles.PreferredSize.Width+refresh.PreferredSize.Width+540),664);
