@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3 — 2026-11-09
+
+- Add optional Venture integration under Oculus Games on verified Streamer 1.34.25.0. It is off by default and applies after a Streamer restart.
+- Display original Venture covers, launch completed installations through Venture, and close the game using the tile's X button.
+
 ## 0.2.2 — 2026-11-08
 
 - Add optional per-game VDXR render resolution (50–200%) and Additional sharpening (5–100% strength).

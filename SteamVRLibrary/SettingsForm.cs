@@ -1,4 +1,5 @@
 using Microsoft.Win32;
+using VirtualDesktop.Unlock;
 
 namespace SteamVRLibrary;
 
@@ -49,20 +50,20 @@ public sealed class WindowsStartupRegistration : IStartupRegistration
 
 public sealed class SettingsForm : Form
 {
-    public SettingsForm(IStartupRegistration startup, bool showErrors = true, TraySettings? traySettings = null, BitratePreferences? bitratePreferences = null)
+    public SettingsForm(IStartupRegistration startup, bool showErrors = true, TraySettings? traySettings = null, BitratePreferences? bitratePreferences = null, VenturePreferences? venturePreferences = null)
     {
         Text = "Settings — Virtual Desktop Unlock";
         BackColor = Color.FromArgb(14, 20, 31);
         ForeColor = Color.White;
         Font = new Font("Segoe UI", 10);
-        ClientSize = new Size(680, 390);
+        ClientSize = new Size(680, 438);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = MinimizeBox = false;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.CenterParent;
         AutoScaleMode = AutoScaleMode.Dpi;
-        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(24), ColumnCount = 1, RowCount = 8 };
-        foreach (int height in new[] { 40, 32, 44, 48, 48, 48, 44, 26 }) root.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
+        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(24), ColumnCount = 1, RowCount = 9 };
+        foreach (int height in new[] { 40, 32, 44, 48, 48, 48, 48, 44, 26 }) root.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
         Controls.Add(root);
         root.Controls.Add(new Label { Text = "Settings", AutoSize = true, Font = new Font(Font.FontFamily, 19, FontStyle.Bold) }, 0, 0);
         root.Controls.Add(new Label { Text = "Language", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, ForeColor = Color.FromArgb(159, 176, 199) }, 0, 1);
@@ -111,7 +112,7 @@ public sealed class SettingsForm : Form
             }
         };
         root.Controls.Add(tray, 0, 4);
-        var bitrate = new CheckBox { Text = "Enable higher bitrate limits * Experimental", Enabled = bitratePreferences != null, Checked = bitratePreferences?.Configuration.Enabled ?? false, AutoSize = true, Anchor = AnchorStyles.Left, AccessibleName = "Remove streaming bitrate limits" };
+        var bitrate = new CheckBox { Text = "Enable higher bitrate limits", Enabled = bitratePreferences != null, Checked = bitratePreferences?.Configuration.Enabled ?? false, AutoSize = true, Anchor = AnchorStyles.Left, AccessibleName = "Remove streaming bitrate limits" };
         bool updatingBitrate = false;
         bitrate.CheckedChanged += (_, _) =>
         {
@@ -123,12 +124,59 @@ public sealed class SettingsForm : Form
                 if (showErrors) LocalizedMessageBox.Show(this, e.Message, "Could not save bitrate setting", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         };
-        root.Controls.Add(bitrate, 0, 5);
+        root.Controls.Add(ExperimentalOption(bitrate), 0, 5);
+        var venture = new CheckBox
+        {
+            Text = "Show Venture games in Oculus Games (restart Streamer)",
+            AccessibleName = "Show Venture games in Oculus Games",
+            Enabled = venturePreferences != null,
+            Checked = venturePreferences?.Enabled == true,
+            AutoSize = true,
+            Anchor = AnchorStyles.Left
+        };
+        bool updatingVenture = false;
+        venture.CheckedChanged += (_, _) =>
+        {
+            if (updatingVenture || venturePreferences == null) return;
+            try { venturePreferences.SetEnabled(venture.Checked); }
+            catch (Exception e)
+            {
+                updatingVenture = true;
+                venture.Checked = venturePreferences.Enabled;
+                updatingVenture = false;
+                if (showErrors) LocalizedMessageBox.Show(this, e.Message, "Could not save Venture setting", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        };
+        root.Controls.Add(ExperimentalOption(venture), 0, 6);
         var close = new Button { Text = "Done", DialogResult = DialogResult.OK, Size = new Size(100, 34), Anchor = AnchorStyles.Right, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(108, 218, 188), ForeColor = BackColor };
-        root.Controls.Add(close, 0, 6);
-        root.Controls.Add(new Label { Text = "by ShadowManXR", Dock = DockStyle.Fill, TextAlign = ContentAlignment.BottomCenter, ForeColor = Color.FromArgb(159, 176, 199), Font = new Font(Font.FontFamily, 9), Margin = Padding.Empty }, 0, 7);
+        root.Controls.Add(close, 0, 7);
+        root.Controls.Add(new Label { Text = "by ShadowManXR", Dock = DockStyle.Fill, TextAlign = ContentAlignment.BottomCenter, ForeColor = Color.FromArgb(159, 176, 199), Font = new Font(Font.FontFamily, 9), Margin = Padding.Empty }, 0, 8);
         AcceptButton = CancelButton = close;
         Localizer.Apply(this);
+    }
+
+    private static Control ExperimentalOption(CheckBox option)
+    {
+        var row = new TableLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 2,
+            RowCount = 1,
+            Anchor = AnchorStyles.Left,
+            Margin = Padding.Empty
+        };
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        row.Controls.Add(option, 0, 0);
+        row.Controls.Add(new Label
+        {
+            Text = "* Experimental",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            ForeColor = Color.FromArgb(255, 171, 83)
+        }, 1, 0);
+        return row;
     }
 }
 

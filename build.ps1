@@ -2,7 +2,7 @@
 param([string]$StreamerPath,[switch]$SkipTests)
 $ErrorActionPreference='Stop'
 $root=$PSScriptRoot
-$version='0.2.2'
+$version='0.2.3'
 $env:DOTNET_CLI_HOME=Join-Path $root '.dotnet-build'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'
 $env:DOTNET_GENERATE_ASPNET_CERTIFICATE='false'
@@ -13,12 +13,34 @@ $tests=Join-Path $work 'runtime-tests'
 $stage=Join-Path $work ('VirtualDesktopUnlock-v'+$version+'-win-x64')
 $dist=Join-Path $root 'artifacts\dist'
 foreach($path in @($publish,$hook,$tests,$stage,$dist)){New-Item -ItemType Directory -Path $path -Force | Out-Null}
-& dotnet publish (Join-Path $root 'SteamVRLibrary\SteamVRLibrary.csproj') -c Release -o $publish ('-p:OutputPath='+(Join-Path $work 'app-build')) --configfile (Join-Path $root 'NuGet.Config')
+& dotnet publish (Join-Path $root 'SteamVRLibrary\SteamVRLibrary.csproj') -c Release -o $publish ("-p:Version=$version") ('-p:OutputPath='+(Join-Path $work 'app-build')) --configfile (Join-Path $root 'NuGet.Config')
 if($LASTEXITCODE -ne 0){throw 'Companion app build failed.'}
 $compiler=Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $framework=Split-Path -Parent $compiler
 $references=@("/reference:$framework\WPF\PresentationFramework.dll","/reference:$framework\WPF\WindowsBase.dll",'/reference:System.Xaml.dll')
-& $compiler /nologo /target:library ('/out:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) $references (Join-Path $root 'src\RuntimeOverrides\LibraryOverrides.cs') (Join-Path $root 'src\RuntimeOverrides\BitrateRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRecovery.cs') (Join-Path $root 'src\RuntimeOverrides\SteamGameLifetime.cs') (Join-Path $root 'Shared\LaunchPresetConfiguration.cs') (Join-Path $root 'Shared\BitrateConfiguration.cs')
+$dependencies=Join-Path $root 'artifacts\dependencies'
+New-Item -ItemType Directory -Path $dependencies -Force | Out-Null
+$webpFiles=@(
+    @{Name='libwebp-1.6.0-windows-x64.zip'; Url='https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.6.0-windows-x64.zip'; Hash='48886F506B21F62E4661F0F4CBFCA19800897C385128E8902542D29A950C93F1'},
+    @{Name='libwebp-COPYING.txt'; Url='https://raw.githubusercontent.com/webmproject/libwebp/v1.6.0/COPYING'; Hash='5AEC868F669E384A22372A4E8A1A6CD7D44C64CD451F960CA69CC170D1E13ACF'},
+    @{Name='libwebp-PATENTS.txt'; Url='https://raw.githubusercontent.com/webmproject/libwebp/v1.6.0/PATENTS'; Hash='CC3273E0694EA5896145E0677699B53471B03EA43021DDC50E7923FBB9F5023C'}
+)
+foreach($file in $webpFiles){
+    $path=Join-Path $dependencies $file.Name
+    if(!(Test-Path -LiteralPath $path)){Invoke-WebRequest -Uri $file.Url -OutFile $path}
+    if((Get-FileHash -LiteralPath $path).Hash -ne $file.Hash){throw "libwebp dependency hash mismatch: $($file.Name)"}
+    if($file.Name.EndsWith('.txt')){Copy-Item -LiteralPath $path -Destination $stage}
+}
+$webpArchive=Join-Path $dependencies 'libwebp-1.6.0-windows-x64.zip'
+Expand-Archive -LiteralPath $webpArchive -DestinationPath $work
+$decoder=Join-Path $work 'libwebp-1.6.0-windows-x64\bin\dwebp.exe'
+$ventureSources=@('/reference:System.Web.Extensions.dll','/reference:System.Drawing.dll',
+    "/resource:$decoder,VDUnlock.dwebp.exe",
+    (Join-Path $root 'src\RuntimeOverrides\VentureRuntime.cs'),
+    (Join-Path $root 'src\RuntimeOverrides\VentureWebp.cs'),
+    (Join-Path $root 'src\RuntimeOverrides\VentureGameProcess.cs'),
+    (Join-Path $root 'Shared\VenturePreferences.cs'))
+& $compiler /nologo /target:library ('/out:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) $references $ventureSources (Join-Path $root 'src\RuntimeOverrides\LibraryOverrides.cs') (Join-Path $root 'src\RuntimeOverrides\BitrateRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRecovery.cs') (Join-Path $root 'src\RuntimeOverrides\SteamGameLifetime.cs') (Join-Path $root 'Shared\LaunchPresetConfiguration.cs') (Join-Path $root 'Shared\BitrateConfiguration.cs')
 if($LASTEXITCODE -ne 0){throw 'Runtime helper build failed.'}
 Copy-Item -LiteralPath (Join-Path $root 'src\RuntimeOverrides\RuntimeHook.config') -Destination (Join-Path $hook 'VirtualDesktop.Streamer.exe.config')
 [pscustomobject]@{Version=$version;StreamerVersion='1.34.25.0';StreamerSHA256='0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8';SupportedStreamers=@(@{Version='1.34.23.0';SHA256='FEAD548C57DF539006E6C97A7A29D46FDE172F756F40D65DBDB77ABAAFA3AEAD'},@{Version='1.34.25.0';SHA256='0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8'});HelperSHA256=(Get-FileHash -LiteralPath (Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')).Hash;ConfigSHA256=(Get-FileHash -LiteralPath (Join-Path $hook 'VirtualDesktop.Streamer.exe.config')).Hash} | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $hook 'manifest.json')
@@ -47,6 +69,10 @@ if(!$SkipTests){
         & (Join-Path $hook 'LaunchPresetHookTest.exe') ([IO.Path]::GetFullPath($StreamerPath)) (Join-Path $tests 'launch-hook')
         if($LASTEXITCODE -ne 0){throw 'Isolated launch-preset hook test failed.'}
         if([Diagnostics.FileVersionInfo]::GetVersionInfo($StreamerPath).FileVersion -eq '1.34.25.0'){
+            & $compiler /nologo /target:exe ('/out:'+(Join-Path $tests 'VentureIntegrationTest.exe')) (Join-Path $root 'src\RuntimeOverrides\VentureIntegrationTest.cs')
+            if($LASTEXITCODE -ne 0){throw 'Venture integration test did not compile.'}
+            & (Join-Path $tests 'VentureIntegrationTest.exe') ([IO.Path]::GetFullPath($StreamerPath)) (Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll') (Join-Path $tests 'venture-integration') (Join-Path $work 'libwebp-1.6.0-windows-x64\test.webp')
+            if($LASTEXITCODE -ne 0){throw 'Isolated Venture game-list test failed.'}
             & $compiler /nologo /target:exe ('/out:'+(Join-Path $tests 'FovHookTest.exe')) (Join-Path $root 'src\RuntimeOverrides\FovHookTest.cs')
             if($LASTEXITCODE -ne 0){throw 'FOV forwarding harness did not compile.'}
             & (Join-Path $tests 'FovHookTest.exe') ([IO.Path]::GetFullPath($StreamerPath)) (Join-Path $tests 'fov-settings') (Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')

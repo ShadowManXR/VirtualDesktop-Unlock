@@ -2,7 +2,7 @@
 
 # Virtual Desktop Unlock
 
-**v0.2.2** · Windows x64 · Unofficial · MIT
+**v0.2.3** · Windows x64 · Unofficial · MIT
 
 An unofficial program for extending Virtual Desktop Streaming. Add custom Steam games, including games that use third-party VR mods, to Virtual Desktop's actual headset Games tab using the optional runtime helper. The desktop companion app organizes your installed Steam games, saves selections for the helper, and provides optional headset-specific bitrate ceilings.
 
@@ -12,10 +12,14 @@ An unofficial program for extending Virtual Desktop Streaming. Add custom Steam 
 
 | Feature | Result |
 |---|---|
-| Optional integration | Adds custom Steam IDs to Streamer's game discovery. Supports verified Streamer **1.34.23.0** and **1.34.25.0** binaries with helper 0.2.2.0. RE3 and Gothic were previously confirmed in the headset on 1.34.23.0. |
+| Optional integration | Adds custom Steam IDs to Streamer's game discovery. Supports verified Streamer **1.34.23.0** and **1.34.25.0** binaries with helper 0.2.3.0. RE3 and Gothic were previously confirmed in the headset on 1.34.23.0. |
 | Virtual Desktop Unlock app | Add/Remove buttons, search, saving, and per-game launch presets. Custom additions sync to the helper's shared configuration. Restart Streamer and reconnect the headset to apply changes. |
 
 When the saved selection differs from the running helper's confirmed selection, a **Restart Streamer and reconnect to apply custom additions** link appears below the lists. Click it to close and relaunch Streamer; Windows may request administrator permission. The link clears after the helper confirms the selection. Reconnect the headset and reopen Games afterward. The app also detects restarts performed outside the app; failed or cancelled restarts leave the link available to retry.
+
+## Venture games
+
+On verified Streamer **1.34.25.0**, enable **Show Venture games in Oculus Games** in Settings, then restart Streamer and reconnect the headset. This setting is off by default. With Venture installed in its default Windows locations, completed games appear under **Games → Oculus Games**. Use **Play** to launch through Venture and **X** to close the game.
 
 ## Download and run
 

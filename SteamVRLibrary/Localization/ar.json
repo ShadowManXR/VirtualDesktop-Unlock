@@ -32,7 +32,9 @@
   "Not running": "متوقف",
   "Loaded": "تم التحميل",
   "Not loaded": "غير محملة",
-  "VIRTUAL DESKTOP   ·   Streamer: {0}   ·   Library: {1}": "‏⁦VIRTUAL DESKTOP⁩   ·   ⁦Streamer⁩: {0}   ·   المكتبة: {1}",
+  "VIRTUAL DESKTOP   ·   Streamer: {0}   ·   Library: {1}   ·   {2}   ·   {3}": "‏⁦VIRTUAL DESKTOP⁩   ·   ⁦Streamer⁩: {0}   ·   المكتبة: {1}   ·   {2}   ·   {3}",
+  "{0} detected": "تم اكتشاف ⁦{0}⁩",
+  "{0} not detected": "لم يتم اكتشاف ⁦{0}⁩",
   "{0} of {1} games": "{0} من {1} لعبة",
   "Installed": "مثبتة",
   "Not installed": "غير مثبتة",
@@ -47,7 +49,8 @@
   "Launch requested through Steam  ·  {0}": "تم طلب التشغيل عبر Steam  ·  {0}",
   "Launch automatically when Windows starts": "التشغيل تلقائيًا عند بدء Windows",
   "Show in system tray (close window to tray)": "العرض في علبة النظام عند إغلاق النافذة",
-  "Enable higher bitrate limits * Experimental": "تفعيل حدود أعلى لمعدل البت * تجريبي",
+  "Enable higher bitrate limits": "تفعيل حدود أعلى لمعدل البت",
+  "* Experimental": "* تجريبي",
   "Done": "تم",
   "Cancel": "إلغاء",
   "Save profiles": "حفظ الملفات",
@@ -149,5 +152,7 @@
   "VDXR render resolution": "دقة تصيير VDXR",
   "Override additional sharpening (experimental)": "تجاوز زيادة الحدة الإضافية (تجريبي)",
   "Additional sharpening": "زيادة الحدة الإضافية",
-  "Sharpening strength": "مستوى الحدة"
+  "Sharpening strength": "مستوى الحدة",
+  "Show Venture games in Oculus Games (restart Streamer)": "عرض ألعاب Venture في Oculus Games (أعد تشغيل Streamer)",
+  "Could not save Venture setting": "تعذر حفظ إعداد Venture"
 }

@@ -32,7 +32,9 @@
   "Not running": "停止中",
   "Loaded": "読み込み済み",
   "Not loaded": "未読み込み",
-  "VIRTUAL DESKTOP   ·   Streamer: {0}   ·   Library: {1}": "VIRTUAL DESKTOP   ·   Streamer：{0}   ·   ライブラリ：{1}",
+  "VIRTUAL DESKTOP   ·   Streamer: {0}   ·   Library: {1}   ·   {2}   ·   {3}": "VIRTUAL DESKTOP   ·   Streamer：{0}   ·   ライブラリ：{1}   ·   {2}   ·   {3}",
+  "{0} detected": "{0} を検出",
+  "{0} not detected": "{0} が見つかりません",
   "{0} of {1} games": "{1} 件中 {0} 件",
   "Installed": "インストール済み",
   "Not installed": "未インストール",
@@ -47,7 +49,8 @@
   "Launch requested through Steam  ·  {0}": "Steam 経由で起動を要求  ·  {0}",
   "Launch automatically when Windows starts": "Windows 起動時に自動実行",
   "Show in system tray (close window to tray)": "閉じると通知領域に格納",
-  "Enable higher bitrate limits * Experimental": "高いビットレート上限を有効化 * 実験的",
+  "Enable higher bitrate limits": "高いビットレート上限を有効化",
+  "* Experimental": "* 実験的",
   "Done": "完了",
   "Cancel": "キャンセル",
   "Save profiles": "設定を保存",
@@ -149,5 +152,7 @@
   "VDXR render resolution": "VDXR レンダリング解像度",
   "Override additional sharpening (experimental)": "追加のシャープ化を上書き（実験的）",
   "Additional sharpening": "追加のシャープ化",
-  "Sharpening strength": "シャープ化の強度"
+  "Sharpening strength": "シャープ化の強度",
+  "Show Venture games in Oculus Games (restart Streamer)": "Oculus Games に Venture のゲームを表示（Streamer の再起動が必要）",
+  "Could not save Venture setting": "Venture の設定を保存できませんでした"
 }

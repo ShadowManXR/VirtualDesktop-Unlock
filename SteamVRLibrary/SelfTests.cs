@@ -95,6 +95,9 @@ internal static class SelfTests
                 Check(form.Text.StartsWith("Virtual Desktop Unlock") && controls.OfType<Label>().Any(x => x.Text == "VD cache games")
                     && !controls.Any(x => x.Text.Contains("Steam VR Library")), "Uses the new application and cache panel names without the old label");
                 Check(banner.Text.Contains("Streamer: Running") && banner.Text.Contains("Library: Loaded") && banner.BackColor == Color.FromArgb(22, 48, 49), "Running Streamer and loaded library show green status");
+                var expectedSteam = File.Exists(Path.Combine(SteamScanner.InstallationPath, "steam.exe")) ? "Steam detected" : "Steam not detected";
+                var expectedVenture = File.Exists(VirtualDesktop.Unlock.VenturePreferences.LauncherPath) ? "Venture detected" : "Venture not detected";
+                Check(banner.Text.Contains(expectedSteam + "   ·   " + expectedVenture), "The status line shows Steam detection before Venture detection");
                 var readyIcon = form.Icon;
                 Check(form.CurrentIconState == ConnectionIcon.Ready, "Running Streamer with loaded library uses the white-lock ready icon");
                 streamer.IsRunning = false; form.UpdateConnectionStatus();
@@ -211,12 +214,26 @@ internal static class SelfTests
             }
             var trayPath = Path.Combine(root, "Preferences", "Settings.json");
             var traySettings = new TraySettings(trayPath);
+            var venturePath = Path.Combine(root, "Preferences", "Venture.enabled");
+            var venturePreferences = new VirtualDesktop.Unlock.VenturePreferences(venturePath);
             Check(traySettings.Enabled && !File.Exists(trayPath), "System tray is enabled by default without overwriting settings");
-            using (var settings = new SettingsForm(startup, showErrors: false, traySettings: traySettings, bitratePreferences: bitratePreferences))
+            using (var settings = new SettingsForm(startup, showErrors: false, traySettings: traySettings,
+                bitratePreferences: bitratePreferences, venturePreferences: venturePreferences))
             {
                 settings.ShowInTaskbar = false; settings.StartPosition = FormStartPosition.Manual;
                 settings.Location = new Point(-20000, -20000); settings.Show(); Application.DoEvents();
                 var settingsControls = settings.Controls[0].Controls.Cast<Control>().ToArray();
+                var experimentalRows = settingsControls.OfType<TableLayoutPanel>().ToArray();
+                var experimentalOptions = experimentalRows.SelectMany(row => row.Controls.OfType<CheckBox>()).ToArray();
+                Check(experimentalRows.Length == 2 && experimentalRows.All(row =>
+                    row.Controls.OfType<Label>().Any(label => label.Text == "* Experimental" && label.ForeColor == Color.FromArgb(255, 171, 83))),
+                    "Venture and bitrate settings have orange Experimental labels");
+                var venture = experimentalOptions.Single(c => c.AccessibleName == "Show Venture games in Oculus Games");
+                Check(venture.Enabled && !venture.Checked && !File.Exists(venturePath), "Venture starts unchecked without creating a preference");
+                venture.Checked = true;
+                Check(new VirtualDesktop.Unlock.VenturePreferences(venturePath).Enabled, "Enabling Venture persists across settings reload");
+                venture.Checked = false;
+                Check(!new VirtualDesktop.Unlock.VenturePreferences(venturePath).Enabled, "Disabling Venture persists across settings reload");
                 var autoStart = settingsControls.OfType<CheckBox>().Single(c => c.AccessibleName == "Launch at Windows startup");
                 var tray = settingsControls.OfType<CheckBox>().Single(c => c.AccessibleName == "Show in system tray");
                 Check(tray.Checked, "Settings shows the enabled-by-default system tray option");
@@ -226,7 +243,7 @@ internal static class SelfTests
                 Check(new TraySettings(trayPath).Enabled, "Re-enabling the system tray persists across settings reload");
                 Check(!autoStart.Checked && startup.Writes == 0, "Opening settings leaves Windows startup unchanged");
                 Check(settingsControls.OfType<ComboBox>().Single().Enabled && settingsControls.OfType<ComboBox>().Single().Items.Count == 10, "Language picker offers all ten supported languages");
-                var bitrateSetting = settingsControls.OfType<CheckBox>().Single(c => c.AccessibleName == "Remove streaming bitrate limits");
+                var bitrateSetting = experimentalOptions.Single(c => c.AccessibleName == "Remove streaming bitrate limits");
                 Check(bitrateSetting.Enabled, "Bitrate setting is functional rather than a future placeholder");
                 bitrateSetting.Checked = true;
                 Check(VirtualDesktop.Unlock.BitrateConfiguration.Read(bitratePreferences.Path).Enabled, "Settings checkbox saves the same bitrate configuration");

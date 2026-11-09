@@ -68,19 +68,24 @@ namespace VirtualDesktop.LibraryOverrides
             method.SetImplementationFlags(MethodImplAttributes.NoInlining|MethodImplAttributes.NoOptimization);
             var il=method.GetILGenerator();il.Emit(OpCodes.Ldarg_0);il.Emit(OpCodes.Box,game);il.Emit(OpCodes.Call,typeof(LaunchPresetRuntime).GetMethod("Launch"));il.Emit(OpCodes.Ret);
             replacementRoot=type.CreateType().GetMethod("Launch");
-            RuntimeHelpers.PrepareMethod(entry.MethodHandle);RuntimeHelpers.PrepareMethod(replacementRoot.MethodHandle);
-            IntPtr address=entry.MethodHandle.GetFunctionPointer();
             byte[] expected={0x55,0x41,0x56,0x57,0x56,0x53,0x48,0x81,0xec,0x90,0x00,0x00,0x00};
-            var actual=new byte[expected.Length];Marshal.Copy(address,actual,0,actual.Length);
-            for(int i=0;i<expected.Length;i++)if(actual[i]!=expected[i])throw new NotSupportedException("Unexpected launch JIT entry; no hook applied.");
-            var jump=new byte[12];jump[0]=0x48;jump[1]=0xb8;Array.Copy(BitConverter.GetBytes(replacementRoot.MethodHandle.GetFunctionPointer().ToInt64()),0,jump,2,8);jump[10]=0xff;jump[11]=0xe0;
-            uint old;if(!VirtualProtect(address,(UIntPtr)jump.Length,0x40,out old))throw new System.ComponentModel.Win32Exception();
-            try{Marshal.Copy(jump,0,address,jump.Length);FlushInstructionCache(Process.GetCurrentProcess().Handle,address,(UIntPtr)jump.Length);}
-            finally{uint ignored;VirtualProtect(address,(UIntPtr)jump.Length,old,out ignored);}
+            Redirect(entry,replacementRoot.MethodHandle,expected);
             installed=true;log("Launch preset hook installed; Steam game profiles configuration="+ConfigurationPath);
             recoveryTimer=new DispatcherTimer(DispatcherPriority.Background);recoveryTimer.Interval=TimeSpan.FromSeconds(2);
             recoveryTimer.Tick+=async delegate {await PollRecovery();};recoveryTimer.Start();
             log("Launch preset exit recovery active; pending sessions="+recovery.Sessions.Count);
+        }
+
+        internal static void Redirect(MethodInfo entry,RuntimeMethodHandle replacement,byte[] expected)
+        {
+            RuntimeHelpers.PrepareMethod(entry.MethodHandle);RuntimeHelpers.PrepareMethod(replacement);
+            IntPtr address=entry.MethodHandle.GetFunctionPointer();
+            var actual=new byte[expected.Length];Marshal.Copy(address,actual,0,actual.Length);
+            for(int i=0;i<expected.Length;i++)if(actual[i]!=expected[i])throw new NotSupportedException("Unexpected launch JIT entry; no hook applied.");
+            var jump=new byte[12];jump[0]=0x48;jump[1]=0xb8;Array.Copy(BitConverter.GetBytes(replacement.GetFunctionPointer().ToInt64()),0,jump,2,8);jump[10]=0xff;jump[11]=0xe0;
+            uint old;if(!VirtualProtect(address,(UIntPtr)jump.Length,0x40,out old))throw new System.ComponentModel.Win32Exception();
+            try{Marshal.Copy(jump,0,address,jump.Length);FlushInstructionCache(Process.GetCurrentProcess().Handle,address,(UIntPtr)jump.Length);}
+            finally{uint ignored;VirtualProtect(address,(UIntPtr)jump.Length,old,out ignored);}
         }
 
         // Recreate only the compiler's async entry wrapper. The original MoveNext,
@@ -113,6 +118,7 @@ namespace VirtualDesktop.LibraryOverrides
         public static Task Launch(object game)
         {
             int platform=Convert.ToInt32(platformField.GetValue(game));ulong id=Convert.ToUInt64(idField.GetValue(game));
+            if(platform==0 && VentureRuntime.TryLaunch(game,id))return Task.FromResult(0);
             if(platform!=1)return original(game);
             LaunchPreset preset;
             try{preset=ReadProfile(platform,id);}

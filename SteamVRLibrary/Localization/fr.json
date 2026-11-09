@@ -32,7 +32,9 @@
   "Not running": "Arrêté",
   "Loaded": "Chargée",
   "Not loaded": "Non chargée",
-  "VIRTUAL DESKTOP   ·   Streamer: {0}   ·   Library: {1}": "VIRTUAL DESKTOP   ·   Streamer : {0}   ·   Bibliothèque : {1}",
+  "VIRTUAL DESKTOP   ·   Streamer: {0}   ·   Library: {1}   ·   {2}   ·   {3}": "VIRTUAL DESKTOP   ·   Streamer : {0}   ·   Bibliothèque : {1}   ·   {2}   ·   {3}",
+  "{0} detected": "{0} détecté",
+  "{0} not detected": "{0} non détecté",
   "{0} of {1} games": "{0} jeux sur {1}",
   "Installed": "Installé",
   "Not installed": "Non installé",
@@ -47,7 +49,8 @@
   "Launch requested through Steam  ·  {0}": "Lancement demandé via Steam  ·  {0}",
   "Launch automatically when Windows starts": "Lancer au démarrage de Windows",
   "Show in system tray (close window to tray)": "Afficher dans la zone de notification à la fermeture",
-  "Enable higher bitrate limits * Experimental": "Activer des limites de débit supérieures * Expérimental",
+  "Enable higher bitrate limits": "Activer des limites de débit supérieures",
+  "* Experimental": "* Expérimental",
   "Done": "Terminé",
   "Cancel": "Annuler",
   "Save profiles": "Enregistrer les profils",
@@ -149,5 +152,7 @@
   "VDXR render resolution": "Résolution de rendu VDXR",
   "Override additional sharpening (experimental)": "Remplacer la netteté supplémentaire (expérimental)",
   "Additional sharpening": "Netteté supplémentaire",
-  "Sharpening strength": "Intensité de netteté"
+  "Sharpening strength": "Intensité de netteté",
+  "Show Venture games in Oculus Games (restart Streamer)": "Afficher les jeux Venture dans Oculus Games (redémarrer Streamer)",
+  "Could not save Venture setting": "Impossible d’enregistrer le réglage de Venture"
 }

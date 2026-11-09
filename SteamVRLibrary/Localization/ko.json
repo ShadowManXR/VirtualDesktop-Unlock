@@ -32,7 +32,9 @@
   "Not running": "실행 안 됨",
   "Loaded": "로드됨",
   "Not loaded": "로드 안 됨",
-  "VIRTUAL DESKTOP   ·   Streamer: {0}   ·   Library: {1}": "VIRTUAL DESKTOP   ·   Streamer: {0}   ·   라이브러리: {1}",
+  "VIRTUAL DESKTOP   ·   Streamer: {0}   ·   Library: {1}   ·   {2}   ·   {3}": "VIRTUAL DESKTOP   ·   Streamer: {0}   ·   라이브러리: {1}   ·   {2}   ·   {3}",
+  "{0} detected": "{0} 감지됨",
+  "{0} not detected": "{0} 감지되지 않음",
   "{0} of {1} games": "게임 {1}개 중 {0}개",
   "Installed": "설치됨",
   "Not installed": "설치 안 됨",
@@ -47,7 +49,8 @@
   "Launch requested through Steam  ·  {0}": "Steam 실행 요청  ·  {0}",
   "Launch automatically when Windows starts": "Windows 시작 시 자동 실행",
   "Show in system tray (close window to tray)": "닫을 때 시스템 트레이에 표시",
-  "Enable higher bitrate limits * Experimental": "더 높은 비트레이트 제한 사용 * 실험적",
+  "Enable higher bitrate limits": "더 높은 비트레이트 제한 사용",
+  "* Experimental": "* 실험적",
   "Done": "완료",
   "Cancel": "취소",
   "Save profiles": "프로필 저장",
@@ -149,5 +152,7 @@
   "VDXR render resolution": "VDXR 렌더링 해상도",
   "Override additional sharpening (experimental)": "추가 선명화 재정의 (실험적)",
   "Additional sharpening": "추가 선명화",
-  "Sharpening strength": "선명화 강도"
+  "Sharpening strength": "선명화 강도",
+  "Show Venture games in Oculus Games (restart Streamer)": "Oculus Games에 Venture 게임 표시 (Streamer 재시작 필요)",
+  "Could not save Venture setting": "Venture 설정을 저장하지 못했습니다"
 }

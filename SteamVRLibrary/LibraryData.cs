@@ -67,6 +67,9 @@ public sealed record ScanResult(List<Game> Games, HashSet<string> CachedVrIds, L
 public static class SteamScanner
 {
     public static string CachePath => System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Virtual Desktop", "GameSettings.json");
+    internal static string InstallationPath => Registry.GetValue(@"HKEY_CURRENT_USER\Software\Valve\Steam", "SteamPath", null) as string
+        ?? Registry.GetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Valve\Steam", "InstallPath", null) as string
+        ?? System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Steam");
     // Valve's text VDF format allows nested objects, quoted escapes and // comments.
     public static List<string> Tokens(string text)
     {
@@ -126,9 +129,7 @@ public static class SteamScanner
     public static ScanResult Scan(string? steamRoot = null, string? cachePath = null)
     {
         var warnings = new List<string>();
-        steamRoot ??= Registry.GetValue(@"HKEY_CURRENT_USER\Software\Valve\Steam", "SteamPath", null) as string
-            ?? Registry.GetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Valve\Steam", "InstallPath", null) as string
-            ?? System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Steam");
+        steamRoot ??= InstallationPath;
         var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { steamRoot };
         var libraryFile = System.IO.Path.Combine(steamRoot, "steamapps", "libraryfolders.vdf");
         try

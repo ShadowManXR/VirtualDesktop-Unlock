@@ -7,10 +7,11 @@ using System.Threading;
 using System.Collections.Generic;
 using System.Xml;
 using System.Security.Cryptography;
+using VirtualDesktop.Unlock;
 
-[assembly: AssemblyVersion("0.2.2.0")]
+[assembly: AssemblyVersion("0.2.3.0")]
 [assembly: AssemblyTitle("Virtual Desktop Library Overrides")]
-[assembly: AssemblyFileVersion("0.2.2.0")]
+[assembly: AssemblyFileVersion("0.2.3.0")]
 
 namespace VirtualDesktop.LibraryOverrides
 {
@@ -95,7 +96,15 @@ namespace VirtualDesktop.LibraryOverrides
                     {
                         try { BitrateRuntime.Install(assembly,Log); }
                         catch (Exception e) { Log("Bitrate hook unavailable; original bitrate behavior retained: "+e); }
-                        try { LaunchPresetRuntime.Install(assembly,Log); }
+                        try
+                        {
+                            LaunchPresetRuntime.Install(assembly, Log);
+                            if (updated && String.IsNullOrEmpty(testDirectory))
+                            {
+                                try { VentureRuntime.Install(assembly, Log, new VenturePreferences(VenturePreferences.DefaultPath)); }
+                                catch (Exception e) { Log("Venture integration unavailable: " + e); }
+                            }
+                        }
                         catch (Exception e) { Log("Launch presets unavailable; original launch behavior retained: "+e); }
                     }
                     return;

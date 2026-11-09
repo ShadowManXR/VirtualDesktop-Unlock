@@ -129,7 +129,7 @@ public sealed class LibraryForm : Form
         Localizer.Changed += LanguageChanged;
         sharedOverrides = new SharedOverrides(preview || libraryPath != null
             ? Path.Combine(Path.GetDirectoryName(store.Path)!, "GameOverrides.xml") : SharedOverrides.DefaultPath);
-        Text = "Virtual Desktop Unlock — v0.2.2";
+        Text = "Virtual Desktop Unlock — v" + Application.ProductVersion.Split('+')[0];
         Icon = statusIcons[ConnectionIcon.Unloaded];
         trayIcon.Icon = Icon;
         trayIcon.Text = "Virtual Desktop Unlock";
@@ -478,7 +478,13 @@ public sealed class LibraryForm : Form
         }
         string trayText = "Virtual Desktop Unlock — "+Localizer.T(iconState == ConnectionIcon.Unloaded ? "Library not loaded" : iconState == ConnectionIcon.Stopped ? "Streamer stopped" : "Ready");
         trayIcon.Text = trayText.Length > 63 ? trayText[..63] : trayText;
-        Localizer.SetText(connectionStatus,"VIRTUAL DESKTOP   ·   Streamer: {0}   ·   Library: {1}",Localizer.T(running ? "Running" : "Not running"),Localizer.T(ready ? "Loaded" : "Not loaded"));
+        bool steamInstalled = File.Exists(Path.Combine(SteamScanner.InstallationPath, "steam.exe"));
+        bool ventureInstalled = File.Exists(VirtualDesktop.Unlock.VenturePreferences.LauncherPath);
+        Localizer.SetText(connectionStatus, "VIRTUAL DESKTOP   ·   Streamer: {0}   ·   Library: {1}   ·   {2}   ·   {3}",
+            Localizer.T(running ? "Running" : "Not running"),
+            Localizer.T(ready ? "Loaded" : "Not loaded"),
+            Localizer.T(steamInstalled ? "{0} detected" : "{0} not detected", "Steam"),
+            Localizer.T(ventureInstalled ? "{0} detected" : "{0} not detected", "Venture"));
         connectionStatus.BackColor = !ready ? Color.FromArgb(83, 52, 18)
             : running ? Color.FromArgb(22, 48, 49) : Color.FromArgb(77, 28, 36);
         connectionStatus.ForeColor = !ready ? Color.FromArgb(255, 192, 105)
@@ -532,7 +538,9 @@ public sealed class LibraryForm : Form
     private void OpenSettings()
     {
         RestoreAndActivate();
-        using var dialog = new SettingsForm(new WindowsStartupRegistration(), traySettings: traySettings, bitratePreferences: bitratePreferences);
+        using var dialog = new SettingsForm(new WindowsStartupRegistration(), traySettings: traySettings,
+            bitratePreferences: bitratePreferences,
+            venturePreferences: new VirtualDesktop.Unlock.VenturePreferences(VirtualDesktop.Unlock.VenturePreferences.DefaultPath));
         dialog.Icon = Icon;
         dialog.ShowDialog(this);
     }
