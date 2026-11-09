@@ -2,114 +2,30 @@
 
 # Virtual Desktop Unlock
 
-**v0.2.3** · Windows x64 · Unofficial · MIT
+**v0.2.2** · Windows x64 · Unofficial · MIT
 
-An unofficial program for extending Virtual Desktop Streaming. Add custom Steam games, including games that use third-party VR mods, to Virtual Desktop's actual headset Games tab using the optional runtime helper. The desktop companion app organizes your installed Steam games, saves selections for the helper, and provides optional headset-specific bitrate ceilings.
+An unofficial program for extending Virtual Desktop Streaming. Add custom Steam games, including games that use third-party VR mods, to Virtual Desktop's actual headset Games tab using the optional runtime helper. The desktop companion app organizes your installed Steam games, saves selections for the helper, and provides optional headset-specific bitrate ceilings. There is also an option to set application launch presets, such as for FPS, quality, and FOV tangent.
 
 ![Virtual Desktop headset Games panel showing custom Steam games, including Gothic and Resident Evil](screenshots/VirtualDesktop.Android-20261022-125310.jpg)
 
-## Two distinct features
+## Unlock features
 
-| Feature | Result |
+| Feature | Description |
 |---|---|
-| Optional integration | Adds custom Steam IDs to Streamer's game discovery. Supports verified Streamer **1.34.23.0** and **1.34.25.0** binaries with helper 0.2.3.0. RE3 and Gothic were previously confirmed in the headset on 1.34.23.0. |
-| Virtual Desktop Unlock app | Add/Remove buttons, search, saving, and per-game launch presets. Custom additions sync to the helper's shared configuration. Restart Streamer and reconnect the headset to apply changes. |
-
-When the saved selection differs from the running helper's confirmed selection, a **Restart Streamer and reconnect to apply custom additions** link appears below the lists. Click it to close and relaunch Streamer; Windows may request administrator permission. The link clears after the helper confirms the selection. Reconnect the headset and reopen Games afterward. The app also detects restarts performed outside the app; failed or cancelled restarts leave the link available to retry.
-
-## Venture games
-
-On verified Streamer **1.34.25.0**, enable **Show Venture games in Oculus Games** in Settings, then restart Streamer and reconnect the headset. This setting is off by default. With Venture installed in its default Windows locations, completed games appear under **Games → Oculus Games**. Use **Play** to launch through Venture and **X** to close the game.
+| Third-party games | Adds custom Steam IDs to Streamer's game discovery. There is also an option to add games from Venture to the Oculus Games category (this feature has not yet been tested on the Pico 4). |
+| Game launch presets | Allows you to set custom launch parameters, such as FPS, quality, FOV tangent, VDXR render resolution, and sharpening. These settings are applied before the game launches. Once the game is closed, the settings revert to their original values ​​as configured in VD. |
+| Unlimited bitrate | Allows you to set your own bitrate limit for Wi-Fi or USB connections, though there is no guarantee that the stream will work correctly. This is an experimental feature. |
 
 ## Download and run
 
-Version 0.1.5 fixes the startup crash caused by an access-denied Streamer status check after reboot. Upgrade the desktop app while keeping your `Data` folder. An installed helper 0.1.4.0 remains compatible and does not need reinstalling for this fix.
+Download the archive from [Release](https://github.com/ShadowManXR/VirtualDesktop-Unlock/releases)
 
-Version 0.1.6 adds game-library support for Streamer 1.34.25.0. That Streamer update requires helper 0.1.6.0; older helpers reject it and leave custom games unapplied. Bitrate overrides remain limited to Streamer 1.34.23.0. On 1.34.25.0, the helper reports bitrate overrides as unavailable while applying game additions independently.
+## Future plans
 
-Use the gear beside **Virtual Desktop Unlock** to open Settings. **Launch automatically when Windows starts** saves immediately for the current Windows user. Keep the app in its current folder, or disable and enable this option after moving it.
-
-The app supports English, Russian, French, German, Spanish, Chinese (Simplified), Japanese, Korean, Hindi and Arabic. On first launch it selects the current Windows display language if supported, otherwise English. Regional variants map to their supported language (for example, French Canada uses French). Change **Language** in Settings to apply a new language immediately; your choice is saved in `%APPDATA%\Virtual Desktop Unlock\Language.json` and takes precedence on subsequent launches. Arabic uses a mirrored right-to-left layout. Game titles, product names and codec identifiers remain unchanged. Localization does not require a helper reinstall.
-
-## Launch presets
-
-Select exactly one game in the right-hand **VD cache games** list, then click **Launch Preset**. The button remains disabled with no selection, multiple selections, or a selection in the left-hand Steam list. The editor shows the selected game's name, quality/resolution slider, and discrete FPS slider.
-
-For a game without a saved preset, **Use preset** starts unchecked and both sliders are disabled. Check it, adjust the sliders, and choose **Save preset**. Existing saved presets load enabled with their saved values. Clear **Use preset** and save to remove that game's override. Cancel discards edits, and saving changes only the selected game's preset. Changes are stored atomically in `%APPDATA%\Virtual Desktop Unlock\LaunchPresets.xml` and read on the next VD launch without restarting the updated helper:
-
-```xml
-<LaunchPresets version="1">
-  <Game platform="Steam" appId="2981220" fps="144" quality="0" />
-</LaunchPresets>
-```
-
-`quality="0"` means Low. The launch hook supports the verified x64 Streamer **1.34.25.0** binary and Quest 3, and requires the updated helper containing `LaunchPresetRuntime`; older released helpers do not implement it. It applies the settings before entering VD's original launcher, waits one second for synchronization, and checks that the PC selection remains unchanged. There is no protocol acknowledgement from the headset on this path, so the delay alone is not proof of headset readiness. If headset settings are unavailable or change during preparation, the configured launch is cancelled and the reason is written to `%PROGRAMDATA%\Virtual Desktop\LibraryOverrides.log`. Unconfigured games retain VD's original launch behavior.
-
-After the game and its launchers exit, the helper restores the FPS and quality selected before launch. It checks each setting separately and preserves values changed manually during play. Recovery waits until game-folder processes have been absent for three seconds, allowing launcher handoffs. A launch that never produces a game process times out after two minutes and restores its settings. Pending recovery is saved in `%APPDATA%\Virtual Desktop Unlock\LaunchPresetRecovery.xml`, so a Streamer restart or headset disconnect does not discard the original selections; restoration resumes when the game has exited and the headset reconnects. Overlapping configured games restore their presets in reverse launch order, so an older game exiting cannot overwrite a newer game's active preset.
-
-Each game's preset is reapplied on its next launch. Clear **Use preset** and save to disable that game's preset. This covers VD's Games tab, not launches made directly through Steam. Forefront's launch preset has been verified live; exit recovery has passed isolated lifecycle and real child-process tests, with an end-to-end headset launch/exit test still pending.
-
-### Experimental FOV tangent presets (0.2.1)
-
-The launch preset editor includes an optional **Override FOV tangent (experimental)** checkbox, disabled by default. When enabled, horizontal and vertical sliders independently select **40–100%** of the normal FOV tangent in 1% steps. These are tangent multipliers, not angles in degrees. Existing presets leave FOV unchanged until you explicitly enable the override.
-
-The helper applies the selected FOV values through Streamer's original settings setters before the game launcher runs, and restores the previous values after exit. Manual changes during play are preserved separately for each axis. Isolated tests cover native configuration forwarding and recovery. The user confirmed that the FOV preset works in Forefront with both axes set to 70%; rendering behavior in other games remains unverified.
-
-Use the **0.2.1 app and helper together**. FOV-enabled presets and pending recovery use XML format version 2, which older helpers reject. Finish recovery and disable all FOV overrides before reverting to an older build. See [TESTING.md](TESTING.md) for installation and test steps. This build supports launch presets on the verified Streamer **1.34.25.0 / Quest 3** setup.
-
-### VDXR render resolution and Additional sharpening (0.2.2)
-
-Two optional overrides are available in **Launch Preset**. **Override VDXR render resolution (experimental)** enables a **50–200%** slider. **Override additional sharpening (experimental)** enables Additional sharpening at launch and a **5–100%** strength slider. Clear an override checkbox to leave that global setting unchanged. The editor scrolls while Save and Cancel remain available at the bottom.
-
-Both overrides start disabled for existing presets. The helper captures the original values before changing them, applies them before the original game launcher, and restores each unchanged value after exit. Manual changes are preserved independently. Render resolution is a VDXR control; it does not promise equivalent behavior with other runtimes or change the headset's quality tier. Additional sharpening is PC-side CAS before encoding, separate from headset sharpening.
-
-**Install both the 0.2.2 app and helper before enabling these overrides.** New settings and pending recovery use XML format version 3; earlier helpers reject it and can prevent configured games from launching. Existing format 1 and 2 records remain readable. Isolated native forwarding, editor and recovery tests passed. Live Forefront tests confirmed launch and exit restoration, and VDXR reported 0.500 supersampling at a 50% render override. The user reported both tests working; other games and runtimes remain unverified. See [TESTING.md](TESTING.md) for upgrade and verification steps.
-
-## Higher bitrate limits
-
-With helper **0.1.4** installed, click **Remove bitrate limits** on the main screen to enable the configured ceilings. **Restore bitrate limits** returns to stock behavior. The Settings checkbox controls the same option. Changes are read live by the helper; the app reports pending changes until Streamer acknowledges them. Use the restart link if a helper upgrade or restart is required.
-
-The Quest 3 preset is **H.264/H.264+ 1000 Mbps**, **H.265/HEVC 10-bit 300 Mbps**, and **AV1/AV1 10-bit 250 Mbps**. **Bitrate profiles** lets you set each headset's three codec-family ceilings independently. Other headsets retain their original limits until a custom profile is enabled for them. Profiles are stored in `%APPDATA%\Virtual Desktop Unlock\BitrateOverrides.xml`.
-
-Custom profiles only raise stock ceilings; a lower entered value leaves the original ceiling in place. They do not add codec support to headsets that lack it.
-
-These are maximum targets, not a fixed traffic rate: Streamer's bitrate slider, measured network capacity, view splitting and spacewarp behavior still apply. Set the client bitrate slider to its maximum to test the configured ceiling; the client slider may still display its original limit. Client-side decoding, stability and actual transmitted throughput remain to be verified in the headset.
-
-**Experimental: the first headset test still reported 200 Mbps in the performance overlay. Higher actual stream bitrate is not yet confirmed.** The helper's configuration acknowledgement only confirms that the profile was loaded. Changed live calculation inputs and targets are logged as `Bitrate live settings` in `%PROGRAMDATA%\Virtual Desktop\LibraryOverrides.log` to help diagnose the remaining limit.
-
-Later live diagnostics confirmed a custom 222 Mbps AV1 budget reached NVENC as 111 Mbps average and maximum per view. The overlay still showed 200, while sampled total Ethernet traffic was only 84–93 Mbps. The overlay therefore cannot by itself validate this server override. Native configuration is confirmed; actual video traffic above 200 Mbps remains unverified. These diagnostics also report NVENC's average and maximum separately without changing them.
-
-Server-side synthetic NVENC checks accepted AV1 at 250 Mbps, HEVC at 300 Mbps, and H.264 at 500 Mbps per view. A single H.264 stream at 1000 Mbps was rejected with an invalid-level error. For initial testing of the 1000 Mbps H.264 budget, disable spacewarp so Streamer uses its original 500 Mbps per-view allocation; the 1000 Mbps single-stream case is not validated.
-
-The x64 helper verifies the supported Streamer binary and installs an in-memory redirect of its bitrate-ceiling calculation at startup. Runtime profile changes swap configuration data; disabling returns the original captured ceiling for every unconfigured/disabled combination. It does not modify the signed Streamer file, the headset application, or Windows security settings. Server tests exercise the original bitrate calculation and forwarding into encoder wrappers; they do not encode a real video stream.
-
-**Show in system tray** is enabled by default. Closing the window keeps the app running in the tray. Double-click the icon or choose **Open** to restore the window; the tray menu also includes **Settings** and **Exit**. Disabling this setting removes the icon and restores normal close-to-exit behavior. The preference is saved in `%APPDATA%\Virtual Desktop Unlock\Settings.json`.
-
-The window and tray icons update automatically with status: a white lock when ready, red when Streamer is stopped with a loaded library, and orange while the app library is not loaded (including when Streamer is also stopped). The tray tooltip describes the current state.
-
-The status block shows whether Streamer is running and the app's library is loaded. It turns green when both are ready, red when Streamer is stopped with a loaded library, and orange while the library is not loaded. The right-hand **VD cache games** panel contains your saved selection for the headset library.
-
-In the right-hand list, **blue** means the game is in VD's cache and Steam's original metadata identifies it as a VR title. **Orange** means the selected game is not yet in VD's cache; the color updates automatically when Streamer caches it. Cached custom additions retain the normal text color. The left-hand Steam list keeps its normal text color. Cache status reflects the PC-side data; reconnect the headset after applying additions to refresh its Games panel.
-
-Download the latest build from [Releases](https://github.com/MaksymHernets/virtual-desktop-unlock/releases), or build this source, and extract it to a writable folder. The 0.1.0 release does not include selection syncing.
-
-- Open **Virtual Desktop Unlock.exe** to use the companion app. Requires **.NET Desktop Runtime 10**. No administrator permission is needed for this app.
-- Install the optional integration separately using **Install RE3 Integration.cmd**. This requests Administrator permission and briefly restarts Streamer. Requires an exact supported Streamer 1.34.23.0 or 1.34.25.0 binary and .NET Framework 4.7.1 or later (4.8 is suitable).
-- Install REFramework's VR mod for RE3 yourself. This project does not install the game or its mod.
-
-After installing the integration, reconnect Virtual Desktop in the headset and reopen **Games**. Launch **Resident Evil 3** from there.
-
-If a different or manually installed helper/configuration already exists, the installer refuses to overwrite it. Uninstall that helper with its original removal procedure first. Companion selections are saved in `Data/library.json` next to the app, with the previous version in `library.json.bak`.
-
-## What the integration installs
-
-The .NET runtime reads a small `VirtualDesktop.Streamer.exe.config` and loads `VirtualDesktop.LibraryOverrides.dll` from the Streamer directory. After the WPF application is ready, the helper reads `%APPDATA%\Virtual Desktop Unlock\GameOverrides.xml` and adds the selected custom Steam IDs as OpenXR exceptions. Every game on the right is exported, regardless of its origin or Steam VR flags. Selected games override built-in mod-file checks; unselected exceptions retain their original behavior. An explicitly empty shared file disables all custom additions; if no shared file exists, the helper retains the original RE3 default.
-
-The original Streamer executable is **not modified**, and its developer signature remains valid. The helper DLL is unsigned and runs with Streamer's privileges every time Streamer starts. Installing it is optional. It does not change Windows security settings, Steam files, game executables, or game mods. Not affiliated with or endorsed by Virtual Desktop, Valve, Capcom, or REFramework.
-
-To remove it, run **Uninstall RE3 Integration.cmd**. The uninstaller checks its installation record and removes only the matching helper/configuration. If those files were changed externally, it stops instead. Streamer updates may require uninstalling the helper; unsupported versions are skipped by the helper and rejected by the installer.
-
-Logs: `%ProgramData%\Virtual Desktop\LibraryOverrides.log` and `%ProgramData%\Virtual Desktop Unlock\installer.log`. An installation record is kept alongside the helper. No Streamer binaries are included in this repository or release.
+| Feature | Description |
+|---|---|
+| FOV Tangent Fill-Reconstruct | The FOV tangent sets reduced rendering dimensions, which results in the appearance of black areas; these can be filled using various methods, such as gradients, blurring, or mirroring. |
+| Anti-drift stick | Handle stick presses when a finger is resting on the stick, by leveraging the ability to detect finger contact with the stick. A partial solution. |
 
 ## Build
 
