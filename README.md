@@ -22,6 +22,8 @@ An unofficial program for extending Virtual Desktop Streaming. Modifications are
 
 Download the archive from [Release](https://github.com/ShadowManXR/VirtualDesktop-Unlock/releases)
 
+Launch the Virtual Desktop Unlock program; you can then close the window, as the application will remain in the system tray. For its features to be available, the program must be running in the background; to ensure this, select the option in the application settings to have it launch automatically when Windows starts.
+
 ## Future plans
 
 | Feature | Description |
