@@ -44,13 +44,12 @@ The build runs the companion UI/storage tests and an AppDomain-manager loading t
 
 That test uses an isolated configuration directory and does not launch a VR game or install the integration. A build never changes your current Streamer installation.
 
-## Source map
-
-- `SteamVRLibrary/`: WinForms companion app and tests.
-- `src/RuntimeOverrides/`: .NET Framework startup helper, configuration, and test harness.
-- `scripts/`: optional integration installer, uninstaller, and launchers.
-- `assets/`: edited Streamer-derived icon master, PNG, Windows ICO, and artwork attribution.
-- `tools/generate-icon.py`: icon packager (Python + Pillow), needed only when regenerating icon sizes.
-- `docs/verification.md`: compatibility and verification scope.
-
 The MIT license applies to this project's original code. The icon incorporates Virtual Desktop branding; see [artwork attribution](assets/README.md). Install Virtual Desktop and Steam separately from their official sources.
+
+## Disclaimer
+
+All rights in Virtual Desktop belong to its creators and respective rights holders.
+
+We respectfully ask the creators of Virtual Desktop to allow this unofficial add-on to remain available. Its sole purpose is to improve the Virtual Desktop experience by adding optional features. We would welcome seeing these features implemented officially in Virtual Desktop.
+
+If the rights holders ask, we will stop development and remove this repository.
