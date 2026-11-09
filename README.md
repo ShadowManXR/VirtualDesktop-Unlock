@@ -26,6 +26,7 @@ Download the archive from [Release](https://github.com/ShadowManXR/VirtualDeskto
 |---|---|
 | FOV Tangent Fill-Reconstruct | The FOV tangent sets reduced rendering dimensions, which results in the appearance of black areas; these can be filled using various methods, such as gradients, blurring, or mirroring. |
 | Anti-drift stick | Handle stick presses when a finger is resting on the stick, by leveraging the ability to detect finger contact with the stick. A partial solution. |
+| Third-party games not on Steam | Add any VR .exe application, complete with an image, so that it appears in the VD game panel. |
 
 ## Build
 
