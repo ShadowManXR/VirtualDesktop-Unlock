@@ -11,28 +11,6 @@ internal static class Program
         ApplicationConfiguration.Initialize();
         if (args.Contains("--self-test")) return SelfTests.Run();
         Localizer.Initialize();
-        if (args.Length == 2 && args[0] == "--render-launch-presets")
-        {
-            var games = SteamScanner.Scan().Games;
-            using var form = new LaunchPresetsForm(games.FirstOrDefault(g => g.Id == "2981220") ?? games.First(), new LaunchPresetStore(VirtualDesktop.Unlock.LaunchPresetConfiguration.DefaultPath));
-            form.ShowInTaskbar = false; form.StartPosition = FormStartPosition.Manual; form.Location = new Point(-20000,-20000); form.Show(); Application.DoEvents();
-            using var bitmap = new Bitmap(form.Width,form.Height); form.DrawToBitmap(bitmap,new Rectangle(Point.Empty,form.Size)); bitmap.Save(args[1]);return 0;
-        }
-        if (args.Length == 2 && args[0] == "--render-preview")
-        {
-            using var form = new LibraryForm(preview: true);
-            form.LoadPreview();
-            form.ShowInTaskbar = false;
-            form.StartPosition = FormStartPosition.Manual;
-            form.Location = new Point(-20000, -20000);
-            form.Show();
-            Application.DoEvents();
-            // DrawToBitmap renders the app's own controls without operating any other window.
-            using var bitmap = new Bitmap(form.Width, form.Height);
-            form.DrawToBitmap(bitmap, new Rectangle(Point.Empty, form.Size));
-            bitmap.Save(args[1]);
-            return 0;
-        }
         using var mutex = new Mutex(true, SingleInstance.MutexName, out var first);
         if (!first)
         {
@@ -98,7 +76,7 @@ public sealed class LibraryForm : Form
     private readonly Label vrCount = TextLabel("Saved on this PC", Muted, 9);
     private readonly Label status = TextLabel("Loading…", Muted, 9);
     private readonly Label connectionStatus = TextLabel("", Accent, 10);
-    private readonly LinkLabel restart = new() { Text = "Restart Streamer and reconnect to apply custom additions", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, LinkColor = Accent, ActiveLinkColor = Color.White, VisitedLinkColor = Accent, Visible = false, AccessibleName = "Restart Streamer" };
+    private readonly LinkLabel restart = new() { Text = "Restart Streamer and reconnect to apply custom additions", Dock = DockStyle.Top, AutoSize = true, TextAlign = ContentAlignment.MiddleLeft, LinkColor = Accent, ActiveLinkColor = Color.White, VisitedLinkColor = Accent, Visible = false, AccessibleName = "Restart Streamer" };
     private readonly IStreamerControl streamerControl;
     private readonly System.Windows.Forms.Timer restartTimer = new() { Interval = 3000 };
     private uint[]? syncedIds;
@@ -291,7 +269,7 @@ public sealed class LibraryForm : Form
     }
 
     private static Label TextLabel(string text, Color color, float size, FontStyle style = FontStyle.Regular) => new()
-    { Text = text, ForeColor = color, Font = new Font("Segoe UI", size, style), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty };
+    { Text = text, ForeColor = color, Font = new Font("Segoe UI", size, style), Dock = DockStyle.Top, AutoSize = true, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty };
 
     private static Button MakeButton(string text, bool primary = false)
     {
@@ -584,6 +562,10 @@ public sealed class LibraryForm : Form
         int statusWidth=Math.Max(105,Math.Max(TextRenderer.MeasureText(Localizer.T("Installed"),steam.Font).Width,TextRenderer.MeasureText(Localizer.T("Not installed"),steam.Font).Width)+18);
         foreach(var list in new[]{steam,vr}) { list.Columns[1].Width=statusWidth;list.Columns[0].Width=Math.Max(180,list.ClientSize.Width-statusWidth); }
         MinimumSize=new Size(Math.Max(990,bitrate.PreferredSize.Width+bitrateProfiles.PreferredSize.Width+refresh.PreferredSize.Width+540),664);
+        int BtnH(Button b) => Math.Max(34, TextRenderer.MeasureText("Ag", b.Font).Height + 18);
+        details.Height = launchPresets.Height = Math.Max(BtnH(details), BtnH(launchPresets));
+        int actionH = Math.Max(details.Height, launchPresets.Height);
+        if (actionH > 0 && status.Parent is TableLayoutPanel rt && rt.RowStyles.Count > 5) { rt.RowStyles[5].SizeType = SizeType.Absolute; rt.RowStyles[5].Height = actionH + 12 + 8; }
     }
 
     internal void ExitApplication()
@@ -596,12 +578,25 @@ public sealed class LibraryForm : Form
     {
         base.OnShown(e);
         AdjustLocalizedLayout();
+        FitToScreen();
     }
 
     protected override void OnDpiChanged(DpiChangedEventArgs e)
     {
         base.OnDpiChanged(e);
         AdjustLocalizedLayout();
+        FitToScreen();
+    }
+
+    // At 150%+ the scaled window (1160x754 logical) is taller/wider than many
+    // screens and MinimumSize blocks shrinking it: clamp both to the working area.
+    private void FitToScreen()
+    {
+        if (!IsHandleCreated) return;
+        var area = Screen.FromHandle(Handle).WorkingArea;
+        MinimumSize = new Size(Math.Min(MinimumSize.Width, area.Width), Math.Min(MinimumSize.Height, area.Height));
+        if (Width > area.Width || Height > area.Height)
+            Size = new Size(Math.Min(Width, area.Width), Math.Min(Height, area.Height));
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)
