@@ -8,7 +8,7 @@ An unofficial program for extending Virtual Desktop Streaming. Modifications are
 
 > The application has only been tested on the Quest 3. The Quest client may differ from the versions for Pico 4, Galaxy XR (Android XR), HTC Vive Focus 3, etc., so this mod might not function correctly on those devices. Additionally, the mod is still under development and may contain bugs.
 
-![Virtual Desktop headset Games panel showing custom Steam games, including Gothic and Resident Evil](screenshots/0.1.0/VirtualDesktop.Android-20261022-125310.jpg)
+![Virtual Desktop headset Games panel showing custom Steam games](screenshots/0.2.3/VirtualDesktop.Android-20261109-224448.jpg)
 
 ## Unlock features
 
