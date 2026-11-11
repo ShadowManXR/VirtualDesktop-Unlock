@@ -32,8 +32,11 @@ public static class Localizer
                 if (Languages.Any(x => x.Code == saved?.Language)) { selected = saved!.Language;needsSave=false; }
             }
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException) { }
-        try { if(needsSave)Save(selected); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
+        { AppLog.Current.Error("Could not load the language preference", e); }
+        try { if(needsSave)Save(selected); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        { AppLog.Current.Error("Could not save the language preference", e); }
         SetCulture(selected);
     }
     public static void Select(string code, bool persist = true)
@@ -127,6 +130,12 @@ public static class Localizer
 
 internal static class LocalizedMessageBox
 {
+    public static DialogResult Show(IWin32Window owner, Exception error, string caption, MessageBoxButtons buttons, MessageBoxIcon icon)
+    {
+        AppLog.Current.Error(caption, error);
+        return Show(owner, error.Message, caption, buttons, icon);
+    }
+
     public static DialogResult Show(IWin32Window owner,string text,string caption,MessageBoxButtons buttons,MessageBoxIcon icon)
         => MessageBox.Show(owner,Localizer.T(text),Localizer.T(caption),buttons,icon,MessageBoxDefaultButton.Button1,Localizer.IsRtl ? MessageBoxOptions.RtlReading | MessageBoxOptions.RightAlign : 0);
     public static DialogResult Show(string text,string caption,MessageBoxButtons buttons,MessageBoxIcon icon)

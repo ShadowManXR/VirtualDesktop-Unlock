@@ -54,7 +54,7 @@ public sealed class BitrateProfilesForm : Form
         save.Click += (_, _) =>
         {
             try { Commit(); preferences.Save(config); DialogResult = DialogResult.OK; Close(); }
-            catch (Exception e) { LocalizedMessageBox.Show(this, e.Message, "Could not save bitrate profiles", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            catch (Exception e) { LocalizedMessageBox.Show(this, e, "Could not save bitrate profiles", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         };
         root.Controls.Add(cancel, 0, 7); root.Controls.Add(save, 1, 7);
         AcceptButton = save; CancelButton = cancel;

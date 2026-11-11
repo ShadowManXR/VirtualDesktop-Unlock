@@ -113,8 +113,7 @@ namespace VirtualDesktop.LibraryOverrides
 
         internal static int AppendInstalledGames(object collection, string data, string launcher, string art)
         {
-            string games = Path.Combine(data, "games");
-            if (!File.Exists(launcher) || !Directory.Exists(games)) return 0;
+            if (!File.Exists(launcher)) return 0;
             Type collectionType = collection.GetType();
             Type item = collectionType.BaseType.GetGenericArguments()[1];
             Module module = item.Module;
@@ -137,7 +136,7 @@ namespace VirtualDesktop.LibraryOverrides
             var packages = new HashSet<string>(StringComparer.Ordinal);
             lock (catalogLock)
             {
-                foreach (string directory in Directory.EnumerateDirectories(games))
+                foreach (string directory in GameRoots(data).SelectMany(ReadGameDirectories))
                 {
                     string package = Path.GetFileName(directory);
                     if (package.Length > 255 || !Package.IsMatch(package)) continue;
@@ -164,6 +163,53 @@ namespace VirtualDesktop.LibraryOverrides
                 }
             }
             return count;
+        }
+
+        private static IEnumerable<string> GameRoots(string data)
+        {
+            var settings = ReadObject(Path.Combine(data, "settings.json"));
+            string defaultRoot = Path.Combine(data, "games");
+            object value;
+            string primary = settings != null && settings.TryGetValue("gamesDirectory", out value)
+                ? AbsoluteGamePath(value as string) : null;
+            primary = primary ?? defaultRoot;
+            yield return primary;
+
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { primary };
+            var folders = settings != null && settings.TryGetValue("libraryFolders", out value)
+                ? value as IEnumerable : null;
+            folders = folders ?? new object[0];
+            foreach (var folder in folders)
+            {
+                string path = AbsoluteGamePath(folder as string);
+                if (path != null && seen.Add(path)) yield return path;
+            }
+            if (seen.Add(defaultRoot)) yield return defaultRoot;
+        }
+
+        private static string AbsoluteGamePath(string path)
+        {
+            if (String.IsNullOrEmpty(path)) return null;
+            path = path.Replace('/', '\\');
+            if (!path.StartsWith(@"\\", StringComparison.Ordinal) &&
+                (path.Length < 3 || path[1] != ':' || path[2] != '\\')) return null;
+            try
+            {
+                string fullPath = Path.GetFullPath(path);
+                return fullPath.Length == Path.GetPathRoot(fullPath).Length ? fullPath : fullPath.TrimEnd('\\');
+            }
+            catch (ArgumentException) { return null; }
+            catch (NotSupportedException) { return null; }
+            catch (PathTooLongException) { return null; }
+        }
+
+        private static string[] ReadGameDirectories(string root)
+        {
+            try { return Directory.GetDirectories(root); }
+            catch (DirectoryNotFoundException) { return new string[0]; }
+            catch (IOException error) { log("Venture game folder could not be read: " + root + " (" + error.Message + ")"); }
+            catch (UnauthorizedAccessException error) { log("Venture game folder could not be read: " + root + " (" + error.Message + ")"); }
+            return new string[0];
         }
 
         private static ulong EntryId(string package)

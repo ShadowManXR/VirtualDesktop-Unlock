@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4 — 2026-11-11
+
+- Scan Venture's default games folder alongside its configured libraries, with one tile per game.
+- Add desktop application logging to help diagnose errors.
+- Verify that the replacement Streamer loaded the library integration and retry if it exits during restart.
+
 ## 0.2.3 — 2026-11-09
 
 - Add optional Venture integration under Oculus Games on verified Streamer 1.34.25.0. It is off by default and applies after a Streamer restart.

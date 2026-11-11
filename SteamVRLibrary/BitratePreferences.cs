@@ -17,7 +17,11 @@ public sealed class BitratePreferences
         Path = path;
         try { Configuration = BitrateConfiguration.Read(path); }
         catch (Exception e) when (e is IOException or XmlException or UnauthorizedAccessException)
-        { Configuration = BitrateConfiguration.Defaults(); LoadError = e.Message; }
+        {
+            AppLog.Current.Error("Could not load bitrate profiles", e);
+            Configuration = BitrateConfiguration.Defaults();
+            LoadError = e.Message;
+        }
     }
     public void Save(BitrateConfiguration value)
     {

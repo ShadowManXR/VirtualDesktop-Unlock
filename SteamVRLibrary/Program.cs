@@ -7,9 +7,21 @@ internal static class Program
     [STAThread]
     static int Main(string[] args)
     {
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            if (e.ExceptionObject is Exception error) AppLog.Current.Error("Unhandled exception", error);
+        };
         if (args.SequenceEqual(new[] { "--restart-streamer" })) return StreamerControl.RestartInstalledStreamer();
         ApplicationConfiguration.Initialize();
         if (args.Contains("--self-test")) return SelfTests.Run();
+        Application.ThreadException += (_, e) =>
+        {
+            AppLog.Current.Error("Unhandled desktop UI exception", e.Exception);
+            if (!SystemInformation.UserInteractive) return;
+            using var dialog = new ThreadExceptionDialog(e.Exception);
+            if (dialog.ShowDialog() == DialogResult.Abort) Application.Exit();
+        };
+        AppLog.Current.Info("Starting VD Unlock " + Application.ProductVersion);
         Localizer.Initialize();
         if (args.Length == 2 && args[0] == "--render-launch-presets")
         {
@@ -37,7 +49,10 @@ internal static class Program
         if (!first)
         {
             if (!SingleInstance.ActivateExisting())
+            {
+                AppLog.Current.Warning("Could not activate the running VD Unlock window.");
                 LocalizedMessageBox.Show("The existing library window did not respond. Close that instance in Task Manager and try again.", "Virtual Desktop Unlock", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
             return 0;
         }
         using var mainForm = new LibraryForm();
@@ -64,6 +79,7 @@ internal static class Program
 
     private static void StartupLog(string text)
     {
+        AppLog.Current.Info(text);
         try { File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "startup.log"), $"{DateTimeOffset.Now:O} [{Environment.ProcessId}] {text}{Environment.NewLine}"); }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
@@ -238,13 +254,13 @@ public sealed class LibraryForm : Form
                 using var dialog = new LaunchPresetsForm(game, launchPresetStore) { Icon = Icon };
                 if (dialog.ShowDialog(this) == DialogResult.OK) Localizer.SetText(status, "Launch presets saved. Applied the next time each game launches from VD.");
             }
-            catch (Exception e) { LocalizedMessageBox.Show(this, e.Message, "Could not open launch presets", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            catch (Exception e) { LocalizedMessageBox.Show(this, e, "Could not open launch presets", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         };
         bitrate.AccessibleName = "Toggle bitrate limits";
         bitrate.Click += (_, _) =>
         {
             try { bitratePreferences.Toggle(); }
-            catch (Exception e) { LocalizedMessageBox.Show(this, e.Message, "Could not change bitrate limits", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            catch (Exception e) { LocalizedMessageBox.Show(this, e, "Could not change bitrate limits", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         };
         bitrateProfiles.Click += (_, _) => { using var dialog = new BitrateProfilesForm(bitratePreferences); dialog.Icon = Icon; dialog.ShowDialog(this); };
         Localizer.SetToolTip(tip, bitrate, "Configure codec bitrate ceilings. Requires a compatible helper; headset behavior still needs testing.");
@@ -319,6 +335,8 @@ public sealed class LibraryForm : Form
         try
         {
             var next = await Task.Run(() => SteamScanner.Scan());
+            foreach (var warning in next.Warnings)
+                AppLog.Current.Warning("Library scan: " + warning);
             var saved = store.Load();
             if (saved == null)
             {
@@ -331,7 +349,7 @@ public sealed class LibraryForm : Form
             SyncOverrides("Loaded library");
         }
         catch (Exception e)
-        { ready = false; Localizer.SetText(status, "Could not load the library. Your saved selections were left unchanged."); LocalizedMessageBox.Show(this, e.Message, "Could not load library", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+        { ready = false; Localizer.SetText(status, "Could not load the library. Your saved selections were left unchanged."); LocalizedMessageBox.Show(this, e, "Could not load library", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         finally { busy = false; UpdateButtons(); }
     }
 
@@ -436,7 +454,7 @@ public sealed class LibraryForm : Form
             store.Save(next); state = next; Populate();
             SyncOverrides(toVr ? "Saved additions: {0}" : "Saved removals: {0}",selected.Count);
         }
-        catch (Exception e) { LocalizedMessageBox.Show(this, e.Message, "Could not save — move cancelled", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+        catch (Exception e) { LocalizedMessageBox.Show(this, e, "Could not save — move cancelled", MessageBoxButtons.OK, MessageBoxIcon.Error); }
     }
 
     private void SyncOverrides(string action, params object[] args)
@@ -451,7 +469,7 @@ public sealed class LibraryForm : Form
         catch (Exception e)
         {
             Localizer.SetText(status, "Saved locally; Virtual Desktop sync failed. Refresh to retry.");
-            LocalizedMessageBox.Show(this, e.Message, "Could not sync Virtual Desktop overrides", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            LocalizedMessageBox.Show(this, e, "Could not sync Virtual Desktop overrides", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }
 
@@ -506,7 +524,7 @@ public sealed class LibraryForm : Form
         catch (Exception e)
         {
             Localizer.SetText(status, "Streamer restart was not completed. Click the restart message to retry.");
-            if (!preview) LocalizedMessageBox.Show(this, e.Message, "Could not apply library changes", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            if (!preview) LocalizedMessageBox.Show(this, e, "Could not apply library changes", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
         finally { busy = false; UpdateButtons(); UpdateRestartNotice(); }
     }

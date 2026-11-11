@@ -9,9 +9,9 @@ using System.Xml;
 using System.Security.Cryptography;
 using VirtualDesktop.Unlock;
 
-[assembly: AssemblyVersion("0.2.3.0")]
+[assembly: AssemblyVersion("0.2.4.0")]
 [assembly: AssemblyTitle("Virtual Desktop Library Overrides")]
-[assembly: AssemblyFileVersion("0.2.3.0")]
+[assembly: AssemblyFileVersion("0.2.4.0")]
 
 namespace VirtualDesktop.LibraryOverrides
 {

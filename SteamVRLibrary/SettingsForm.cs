@@ -76,7 +76,7 @@ public sealed class SettingsForm : Form
             catch(Exception e)
             {
                 language.SelectedValue=Localizer.Code;
-                if(showErrors)LocalizedMessageBox.Show(this,e.Message,Localizer.T("Could not save language setting"),MessageBoxButtons.OK,MessageBoxIcon.Warning);
+                if(showErrors)LocalizedMessageBox.Show(this,e,"Could not save language setting",MessageBoxButtons.OK,MessageBoxIcon.Warning);
             }
         };
         root.Controls.Add(language, 0, 2);
@@ -85,7 +85,7 @@ public sealed class SettingsForm : Form
         catch (Exception e)
         {
             autoStart.Enabled = false;
-            if (showErrors) LocalizedMessageBox.Show(this, e.Message, "Could not read Windows startup setting", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            if (showErrors) LocalizedMessageBox.Show(this, e, "Could not read Windows startup setting", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
         bool updating = false;
         autoStart.CheckedChanged += (_, _) =>
@@ -95,7 +95,7 @@ public sealed class SettingsForm : Form
             catch (Exception e)
             {
                 updating = true; autoStart.Checked = !autoStart.Checked; updating = false;
-                if (showErrors) LocalizedMessageBox.Show(this, e.Message, "Could not save Windows startup setting", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                if (showErrors) LocalizedMessageBox.Show(this, e, "Could not save Windows startup setting", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         };
         root.Controls.Add(autoStart, 0, 3);
@@ -108,7 +108,7 @@ public sealed class SettingsForm : Form
             catch (Exception e)
             {
                 updatingTray = true; tray.Checked = !tray.Checked; updatingTray = false;
-                if (showErrors) LocalizedMessageBox.Show(this, e.Message, "Could not save system tray setting", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                if (showErrors) LocalizedMessageBox.Show(this, e, "Could not save system tray setting", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         };
         root.Controls.Add(tray, 0, 4);
@@ -121,7 +121,7 @@ public sealed class SettingsForm : Form
             catch (Exception e)
             {
                 updatingBitrate = true; bitrate.Checked = !bitrate.Checked; updatingBitrate = false;
-                if (showErrors) LocalizedMessageBox.Show(this, e.Message, "Could not save bitrate setting", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                if (showErrors) LocalizedMessageBox.Show(this, e, "Could not save bitrate setting", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         };
         root.Controls.Add(ExperimentalOption(bitrate), 0, 5);
@@ -144,7 +144,7 @@ public sealed class SettingsForm : Form
                 updatingVenture = true;
                 venture.Checked = venturePreferences.Enabled;
                 updatingVenture = false;
-                if (showErrors) LocalizedMessageBox.Show(this, e.Message, "Could not save Venture setting", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                if (showErrors) LocalizedMessageBox.Show(this, e, "Could not save Venture setting", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         };
         root.Controls.Add(ExperimentalOption(venture), 0, 6);

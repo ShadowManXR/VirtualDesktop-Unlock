@@ -67,6 +67,34 @@ internal static class VentureIntegrationTest
         Check((int)append.Invoke(null, arguments) == 1, "Completed Venture installation appears in Streamer collection");
         Check((int)append.Invoke(null, arguments) == 0, "Rescanning the same collection avoids duplicate tiles");
 
+        string primary = Path.Combine(root, "Custom Games");
+        string secondary = Path.Combine(root, "Other Games");
+        string settings = Path.Combine(root, "settings.json");
+        Func<string, string> jsonPath = path => path.Replace("\\", "\\\\");
+        File.WriteAllText(settings, "{\"gamesDirectory\":\"" + jsonPath(primary) + "\"}");
+        arguments[0] = Activator.CreateInstance(collectionType, true);
+        Check((int)append.Invoke(null, arguments) == 1, "Venture finds default-folder games when a custom primary folder is configured");
+        string movedGame = Path.Combine(primary, "com.example.alpha", "42");
+        string extraGame = Path.Combine(secondary, "com.example.extra", "42");
+        string defaultGame = Path.Combine(root, "games", "com.example.default", "42");
+        Directory.CreateDirectory(movedGame);
+        Directory.CreateDirectory(extraGame);
+        Directory.CreateDirectory(defaultGame);
+        foreach (string file in new[] { "plan.json", "app.apk", "main.obb" })
+        {
+            File.Copy(Path.Combine(game, file), Path.Combine(movedGame, file));
+            File.Copy(Path.Combine(game, file), Path.Combine(extraGame, file));
+            File.Copy(Path.Combine(game, file), Path.Combine(defaultGame, file));
+        }
+        string extraPlan = Path.Combine(extraGame, "plan.json");
+        File.WriteAllText(extraPlan, File.ReadAllText(extraPlan).Replace("com.example.alpha", "com.example.extra"));
+        string defaultPlan = Path.Combine(defaultGame, "plan.json");
+        File.WriteAllText(defaultPlan, File.ReadAllText(defaultPlan).Replace("com.example.alpha", "com.example.default"));
+        File.WriteAllText(settings, "{\"gamesDirectory\":\"" + jsonPath(primary) + "\",\"libraryFolders\":[\"" +
+            jsonPath(secondary) + "\"]}");
+        arguments[0] = Activator.CreateInstance(collectionType, true);
+        Check((int)append.Invoke(null, arguments) == 3, "Venture scans primary, additional, and unlisted default folders without duplicate tiles");
+
         ulong appId = (ulong)runtime.GetMethod("EntryId", All).Invoke(null, new object[] { "com.example.alpha" });
         Type platform = assembly.GetType("VirtualDesktop.Interfaces.GamePlatform", true);
         Type id = collectionType.BaseType.GetGenericArguments()[0];

@@ -8,11 +8,21 @@ internal static class SelfTests
     {
         var root = Path.Combine(AppContext.BaseDirectory, "test-results", DateTime.Now.ToString("yyyyMMdd-HHmmss-fff"));
         Directory.CreateDirectory(root);
+        var logPath = Path.Combine(root, "Logs", "app.log");
+        AppLog.Current = new AppLog(logPath);
         var checks = new List<string>();
         void Check(bool condition, string name)
         { if (!condition) throw new Exception(name); checks.Add("PASS " + name); }
         try
         {
+            AppLog.Current.Error("Test operation", new IOException("Test failure"));
+            var log = File.ReadAllText(logPath);
+            Check(log.Contains("ERROR Test operation") && log.Contains("System.IO.IOException: Test failure"),
+                "App log saves error context and exception details");
+            using (var logFile = File.OpenWrite(logPath)) logFile.SetLength(2 * 1024 * 1024);
+            AppLog.Current.Warning("Test after rotation");
+            Check(File.Exists(logPath + ".1") && File.ReadAllText(logPath).Contains("WARN Test after rotation"),
+                "App log retains the previous file and continues writing after rotation");
             var steam = Path.Combine(root, "Steam");
             var secondary = Path.Combine(root, "Second library ü");
             Directory.CreateDirectory(Path.Combine(steam, "steamapps"));

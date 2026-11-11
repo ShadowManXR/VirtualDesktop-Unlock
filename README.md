@@ -20,6 +20,10 @@ An unofficial program for extending Virtual Desktop Streaming. Add custom Steam 
 
 Download the archive from [Release](https://github.com/ShadowManXR/VirtualDesktop-Unlock/releases)
 
+## Troubleshooting
+
+The desktop app writes startup events, library scan warnings, and exception details to `%LOCALAPPDATA%\Virtual Desktop Unlock\Logs\app.log`. It keeps the previous log as `app.log.1`. Streamer helper and installer errors are recorded in `%ProgramData%\Virtual Desktop\LibraryOverrides.log` and `%ProgramData%\Virtual Desktop Unlock\installer.log`.
+
 ## Future plans
 
 | Feature | Description |
