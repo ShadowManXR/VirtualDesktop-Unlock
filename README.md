@@ -2,7 +2,7 @@
 
 # Virtual Desktop Unlock
 
-**v0.2.2** · Windows x64 · Unofficial · MIT
+**v0.2.4** · Windows x64 · Unofficial · MIT
 
 An unofficial program for extending Virtual Desktop Streaming. Modifications are applied only to the back-end server component installed on Windows; the client requires no modification. Add custom Steam games, including games that use third-party VR mods, to Virtual Desktop's actual headset Games tab using the optional runtime helper. The desktop companion app organizes your installed Steam games, saves selections for the helper, and provides optional headset-specific bitrate ceilings. There is also an option to set application launch presets, such as for FPS, quality, and FOV tangent.
 
@@ -14,7 +14,7 @@ An unofficial program for extending Virtual Desktop Streaming. Modifications are
 
 | Feature | Description |
 |---|---|
-| Third-party games | Adds custom Steam IDs to Streamer's game discovery. There is also an option to add games from Venture to the Oculus Games category (this feature has not yet been tested on the Pico 4). |
+| Third-party games | Adds custom Steam IDs to Streamer's game discovery. There is also an option to add games from [Venture](https://github.com/Villagers654/Venture) to the Oculus Games category (this feature has not yet been tested on the Pico 4). |
 | Game launch presets | Allows you to set custom launch parameters, such as FPS, quality, FOV tangent, VDXR render resolution, and sharpening. These settings are applied before the game launches. Once the game is closed, the settings revert to their original values ​​as configured in VD. |
 | Unlimited bitrate | Allows you to set your own bitrate limit for Wi-Fi or USB connections, though there is no guarantee that the stream will work correctly. This is an experimental feature. |
 
