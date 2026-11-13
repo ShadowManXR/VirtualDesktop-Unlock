@@ -1,4 +1,6 @@
 {
+  "With custom limits enabled, the client still displays the stock bitrate. The actual stream bitrate can be higher.": "カスタム上限を有効にしても、クライアントには標準のビットレートが表示されます。実際の配信ビットレートは高くなる場合があります。",
+  "Recommended for Quest 3: H.264 {0} Mbps, H.265 {1} Mbps, AV1 {2} Mbps.": "Quest 3 の推奨値: H.264 {0} Mbps、H.265 {1} Mbps、AV1 {2} Mbps。",
   "Close": "閉じる",
   "Steam advertises: {0}": "Steam の記載: {0}",
   "Unknown": "不明",

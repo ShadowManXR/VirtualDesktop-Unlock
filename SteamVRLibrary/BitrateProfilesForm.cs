@@ -5,7 +5,7 @@ namespace SteamVRLibrary;
 
 public sealed class BitrateProfilesForm : Form
 {
-    private TableLayoutPanel? root;private Label? note;private readonly Size baseClient;
+    private TableLayoutPanel? root;private readonly Size baseClient;
     public BitrateProfilesForm(BitratePreferences preferences)
     {
         Text = "Bitrate profiles — Virtual Desktop Unlock";
@@ -13,9 +13,9 @@ public sealed class BitrateProfilesForm : Form
         ClientSize = new Size(720, 440); FormBorderStyle = FormBorderStyle.FixedDialog; AutoScroll = true;
         MaximizeBox = MinimizeBox = false; ShowInTaskbar = false; StartPosition = FormStartPosition.CenterParent; AutoScaleMode = AutoScaleMode.Dpi;
         var config = preferences.Configuration.Copy();
-        root = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(24), ColumnCount = 2, RowCount = 8 };
+        root = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(24), ColumnCount = 2, RowCount = 10 };
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58)); root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42));
-        for (int i = 0; i < 8; i++) root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        for (int i = 0; i < root.RowCount; i++) root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         Controls.Add(root);
         var title = new Label { Text = "Limits by headset and codec", AutoSize = true, Font = new Font(Font.FontFamily, 17, FontStyle.Bold) };
         root.Controls.Add(title, 0, 0); root.SetColumnSpan(title, 2);
@@ -30,8 +30,23 @@ public sealed class BitrateProfilesForm : Form
             root.Controls.Add(value, 1, row); return value;
         }
         var h264 = Limit("H.264 / H.264+", 3); var hevc = Limit("H.265 / HEVC 10-bit", 4); var av1 = Limit("AV1 / AV1 10-bit", 5);
-        note = new Label { Text = "Unconfigured headsets keep stock limits. The bitrate slider and automatic network limiting still apply.", Dock = DockStyle.Top, AutoSize = true, ForeColor = Color.FromArgb(159, 176, 199) };
+        var warningColor = Color.FromArgb(255, 171, 83);
+        var note = new Label { Text = "Unconfigured headsets keep stock limits. The bitrate slider and automatic network limiting still apply.", Dock = DockStyle.Top, AutoSize = true, ForeColor = warningColor };
         root.Controls.Add(note, 0, 6); root.SetColumnSpan(note, 2);
+        var quest3 = BitrateConfiguration.CreateQuest3Profile();
+        var clientNote = new Label
+        {
+            Text = "With custom limits enabled, the client still displays the stock bitrate. The actual stream bitrate can be higher.",
+            Dock = DockStyle.Top, AutoSize = true, ForeColor = warningColor
+        };
+        root.Controls.Add(clientNote, 0, 7); root.SetColumnSpan(clientNote, 2);
+        var recommendation = new Label
+        {
+            Text = Localizer.T("Recommended for Quest 3: H.264 {0} Mbps, H.265 {1} Mbps, AV1 {2} Mbps.",
+                quest3.H264Mbps, quest3.HevcMbps, quest3.Av1Mbps),
+            Dock = DockStyle.Top, AutoSize = true, ForeColor = Color.FromArgb(123, 220, 136)
+        };
+        root.Controls.Add(recommendation, 0, 8); root.SetColumnSpan(recommendation, 2);
         int previous = -1; bool loading = false;
         void Commit()
         {
@@ -43,14 +58,15 @@ public sealed class BitrateProfilesForm : Form
         {
             if (loading || headsets.SelectedItem is not KeyValuePair<int, string> selected) return;
             Commit(); previous = selected.Key; loading = true;
-            var exists = config.Profiles.TryGetValue(previous, out var p); p ??= new BitrateProfile(1000, 300, 250);
+            var exists = config.Profiles.TryGetValue(previous, out var p);
+            p ??= previous == BitrateConfiguration.Quest3 ? quest3 : new BitrateProfile(1000, 300, 250);
             custom.Checked = exists; h264.Value = p.H264Mbps; hevc.Value = p.HevcMbps; av1.Value = p.Av1Mbps;
             h264.Enabled = hevc.Enabled = av1.Enabled = exists; loading = false;
         }
         custom.CheckedChanged += (_, _) => { if (!loading) h264.Enabled = hevc.Enabled = av1.Enabled = custom.Checked; };
         headsets.SelectedIndexChanged += (_, _) => LoadHeadset();
         headsets.BindingContext = new BindingContext();
-        headsets.SelectedValue = 1000; LoadHeadset();
+        headsets.SelectedValue = BitrateConfiguration.Quest3; LoadHeadset();
         var cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Dock = DockStyle.Top, AutoSize = true };
         var save = new Button { Text = "Save profiles", Dock = DockStyle.Top, AutoSize = true, BackColor = Color.FromArgb(108, 218, 188), ForeColor = BackColor, FlatStyle = FlatStyle.Flat, AccessibleName = "Save bitrate profiles" };
         save.Click += (_, _) =>
@@ -58,7 +74,7 @@ public sealed class BitrateProfilesForm : Form
             try { Commit(); preferences.Save(config); DialogResult = DialogResult.OK; Close(); }
             catch (Exception e) { LocalizedMessageBox.Show(this, e, "Could not save bitrate profiles", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         };
-        root.Controls.Add(cancel, 0, 7); root.Controls.Add(save, 1, 7);
+        root.Controls.Add(cancel, 0, 9); root.Controls.Add(save, 1, 9);
         AcceptButton = save; CancelButton = cancel;
         Localizer.Apply(this);
         baseClient = ClientSize;

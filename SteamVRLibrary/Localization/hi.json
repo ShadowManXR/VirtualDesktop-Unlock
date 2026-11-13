@@ -1,4 +1,6 @@
 {
+  "With custom limits enabled, the client still displays the stock bitrate. The actual stream bitrate can be higher.": "कस्टम सीमाएँ चालू होने पर भी क्लाइंट डिफ़ॉल्ट बिटरेट दिखाता है। स्ट्रीम की वास्तविक बिटरेट अधिक हो सकती है।",
+  "Recommended for Quest 3: H.264 {0} Mbps, H.265 {1} Mbps, AV1 {2} Mbps.": "Quest 3 के लिए अनुशंसित: H.264 {0} Mbps, H.265 {1} Mbps, AV1 {2} Mbps।",
   "Close": "बंद करें",
   "Steam advertises: {0}": "Steam पर दर्ज: {0}",
   "Unknown": "अज्ञात",

@@ -18,19 +18,21 @@ namespace VirtualDesktop.Unlock
 
     public sealed class BitrateConfiguration
     {
+        public const int Quest3 = 1000;
+        public static BitrateProfile CreateQuest3Profile() { return new BitrateProfile(800, 222, 222); }
         public bool Enabled;
         public readonly Dictionary<int, BitrateProfile> Profiles = new Dictionary<int, BitrateProfile>();
         public static string DefaultPath { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Virtual Desktop Unlock", "BitrateOverrides.xml"); } }
         public static readonly Dictionary<int, string> Headsets = new Dictionary<int, string> {
             {259,"Quest"},{320,"Quest 2"},{400,"Quest Pro"},{600,"Vive Focus 3"},{650,"Vive XR Elite"},
-            {700,"Pico Neo 3"},{701,"Pico Neo 3 Link"},{800,"Pico 4"},{1000,"Quest 3"},{1001,"Quest 3S"},
+            {700,"Pico Neo 3"},{701,"Pico Neo 3 Link"},{800,"Pico 4"},{Quest3,"Quest 3"},{1001,"Quest 3S"},
             {1010,"Pico 4 Ultra"},{1100,"Samsung Galaxy XR"},{1400,"Play for Dream MR"},{1500,"Steam Frame"},
             {1600,"XREAL Aura"},{1700,"Pico Space Pro"},{1710,"Meta VR Glasses"}
         };
         public static BitrateConfiguration Defaults()
         {
             var result = new BitrateConfiguration();
-            result.Profiles.Add(1000, new BitrateProfile(1000, 300, 250));
+            result.Profiles.Add(Quest3, CreateQuest3Profile());
             return result;
         }
         public BitrateConfiguration Copy()

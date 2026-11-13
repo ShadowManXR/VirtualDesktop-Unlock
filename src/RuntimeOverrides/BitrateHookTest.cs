@@ -30,6 +30,10 @@ public static class BitrateHookTest
             calculate=assembly.ManifestModule.ResolveMethod(updatedStreamer?0x060212CE:0x060212B7);
             Check(Limit(1000,10,false)==200000000,"Disabled override preserves Quest 3 AV1 ceiling");
             var config=BitrateConfiguration.Defaults();config.Enabled=true;Apply(config);
+            Check(Limit(1000,1,false)==800000000 && Limit(1000,2,false)==222000000 && Limit(1000,10,false)==222000000,
+                "Quest 3 defaults reach the bitrate hook");
+            // Keep the distinct HEVC and AV1 values used to verify encoder routing below.
+            config.Profiles[1000]=new BitrateProfile(1000,300,250);Apply(config);
             foreach(int codec in new[]{1,5})Check(Limit(1000,codec,false)==1000000000,"Quest 3 H264/H264+ ceiling codec="+codec);
             foreach(int codec in new[]{2,6})Check(Limit(1000,codec,false)==300000000,"Quest 3 HEVC/HEVC10 ceiling codec="+codec);
             foreach(int codec in new[]{10,11})Check(Limit(1000,codec,false)==250000000,"Quest 3 AV1/AV110 ceiling codec="+codec);

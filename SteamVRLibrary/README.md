@@ -19,7 +19,6 @@ Requires Windows with .NET Desktop Runtime 10. See the [project README](../READM
 ```powershell
 dotnet publish .\SteamVRLibrary.csproj -c Release -o .\app --configfile .\NuGet.Config
 & '.\app\Virtual Desktop Unlock.exe' --self-test
-& '.\app\Virtual Desktop Unlock.exe' --render-preview "$PWD\preview.png"
 ```
 
-The self-test writes its report to `app/self-test-result.txt` and fixtures to `app/test-results/`. Tests cover Steam library parsing, cached VR detection, persistent changes, empty selections, backups, stale-write rejection, and invalid data. Preview renders the app's real local game lists without modifying the saved selection or launching a game.
+The self-test writes its report to `app/self-test-result.txt` and fixtures to `app/test-results/`. Tests cover Steam library parsing, cached VR detection, persistent changes, empty selections, backups, stale-write rejection, and invalid data.

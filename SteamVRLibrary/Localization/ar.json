@@ -1,4 +1,6 @@
 {
+  "With custom limits enabled, the client still displays the stock bitrate. The actual stream bitrate can be higher.": "عند تفعيل الحدود المخصصة، يستمر العميل في عرض معدل البت الافتراضي. قد يكون معدل البت الفعلي للبث أعلى.",
+  "Recommended for Quest 3: H.264 {0} Mbps, H.265 {1} Mbps, AV1 {2} Mbps.": "الإعدادات الموصى بها لـ Quest 3: ‏H.264 ‏{0} Mbps، ‏H.265 ‏{1} Mbps، ‏AV1 ‏{2} Mbps.",
   "Close": "إغلاق",
   "Steam advertises: {0}": "ما يعلنه Steam: {0}",
   "Unknown": "غير معروف",

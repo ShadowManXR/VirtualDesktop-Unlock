@@ -1,4 +1,6 @@
 {
+  "With custom limits enabled, the client still displays the stock bitrate. The actual stream bitrate can be higher.": "启用自定义限制后，客户端仍会显示默认码率。实际串流码率可能更高。",
+  "Recommended for Quest 3: H.264 {0} Mbps, H.265 {1} Mbps, AV1 {2} Mbps.": "Quest 3 推荐设置：H.264 {0} Mbps、H.265 {1} Mbps、AV1 {2} Mbps。",
   "Close": "关闭",
   "Steam advertises: {0}": "Steam 标明：{0}",
   "Unknown": "未知",

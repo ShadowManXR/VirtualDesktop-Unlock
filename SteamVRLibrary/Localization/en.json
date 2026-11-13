@@ -1,4 +1,6 @@
 {
+  "With custom limits enabled, the client still displays the stock bitrate. The actual stream bitrate can be higher.": "With custom limits enabled, the client still displays the stock bitrate. The actual stream bitrate can be higher.",
+  "Recommended for Quest 3: H.264 {0} Mbps, H.265 {1} Mbps, AV1 {2} Mbps.": "Recommended for Quest 3: H.264 {0} Mbps, H.265 {1} Mbps, AV1 {2} Mbps.",
   "Close": "Close",
   "Steam advertises: {0}": "Steam advertises: {0}",
   "Unknown": "Unknown",

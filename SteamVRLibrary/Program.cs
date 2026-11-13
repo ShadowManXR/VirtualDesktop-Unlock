@@ -657,7 +657,8 @@ public sealed class LibraryForm : Form
         foreach(var list in new[]{steam,vr}) { list.Columns[1].Width=statusWidth;list.Columns[0].Width=Math.Max(180,list.ClientSize.Width-statusWidth); }
         MinimumSize=new Size(Math.Max(990,bitrate.PreferredSize.Width+bitrateProfiles.PreferredSize.Width+refresh.PreferredSize.Width+540),664);
         int BtnH(Button b) => Math.Max(34, TextRenderer.MeasureText("Ag", b.Font).Height + 18);
-        details.Height = launchPresets.Height = Math.Max(BtnH(details), BtnH(launchPresets));
+        details.Height = launchPresets.Height = remapButtons.Height =
+            Math.Max(BtnH(remapButtons), Math.Max(BtnH(details), BtnH(launchPresets)));
         int actionH = Math.Max(details.Height, launchPresets.Height);
         if (actionH > 0 && status.Parent is TableLayoutPanel rt && rt.RowStyles.Count > 5) { rt.RowStyles[5].SizeType = SizeType.Absolute; rt.RowStyles[5].Height = actionH + 12 + 8; }
     }

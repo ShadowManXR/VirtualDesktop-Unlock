@@ -280,7 +280,8 @@ internal static class SelfTests
                 var fields = profiles.Controls[0].Controls.Cast<Control>().ToArray();
                 var headset = fields.OfType<ComboBox>().Single();
                 var values = fields.OfType<NumericUpDown>().ToDictionary(x => x.AccessibleName!);
-                Check((int)headset.SelectedValue! == 1000 && values["H.264 / H.264+"].Value == 1000 && values["H.265 / HEVC 10-bit"].Value == 300 && values["AV1 / AV1 10-bit"].Value == 250, $"Profiles window loads the requested Quest 3 ceilings (headset={headset.SelectedValue}, AV1={values["AV1 / AV1 10-bit"].Value})");
+                Check((int)headset.SelectedValue! == 1000 && values["H.264 / H.264+"].Value == 800 && values["H.265 / HEVC 10-bit"].Value == 222 && values["AV1 / AV1 10-bit"].Value == 222,
+                    "Profiles window loads the Quest 3 defaults of 800, 222 and 222 Mbps");
                 values["AV1 / AV1 10-bit"].Value = 260;
                 headset.SelectedValue = 1001;
                 fields.OfType<CheckBox>().Single().Checked = true;

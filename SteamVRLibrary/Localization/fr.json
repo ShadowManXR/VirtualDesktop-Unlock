@@ -1,4 +1,6 @@
 {
+  "With custom limits enabled, the client still displays the stock bitrate. The actual stream bitrate can be higher.": "Lorsque les limites personnalisées sont activées, le client affiche toujours le débit par défaut. Le débit réel du flux peut être plus élevé.",
+  "Recommended for Quest 3: H.264 {0} Mbps, H.265 {1} Mbps, AV1 {2} Mbps.": "Recommandé pour Quest 3 : H.264 {0} Mbit/s, H.265 {1} Mbit/s, AV1 {2} Mbit/s.",
   "Close": "Fermer",
   "Steam advertises: {0}": "Steam indique : {0}",
   "Unknown": "Inconnu",

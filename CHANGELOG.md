@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.7 — 2026-11-13
+
+- Enable experimental bitrate overrides for the verified Streamer 1.34.25.0 x64 binary.
+- Improve high-DPI sizing in the main window and bitrate profile editor.
+- Set Quest 3 defaults to 800 Mbps for H.264 and 222 Mbps each for H.265 and AV1, and explain why the client's bitrate display can differ from the stream.
+
 ## 0.2.6 — 2026-11-13
 
 - Show the selected game's advertised and last observed VR APIs in Scan details, with API and runtime versions when available.
