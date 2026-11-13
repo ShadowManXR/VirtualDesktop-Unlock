@@ -185,6 +185,14 @@ internal static class SelfTests
                 bitrateButton.PerformClick();
                 Check(!VirtualDesktop.Unlock.BitrateConfiguration.Read(bitratePath).Enabled && bitrateButton.Text == "Remove bitrate limits", "Main bitrate button restores stock limits persistently");
                 var restart = controls.OfType<LinkLabel>().Single(x => x.AccessibleName == "Restart Streamer");
+                var install = controls.OfType<LinkLabel>().Single(x => x.AccessibleName == "Install Virtual Desktop integration");
+                streamer.IntegrationInstalled = false;
+                form.LoadPreview(scan);
+                Check(install.Visible && install.Enabled && !restart.Visible && banner.Text.Contains("Integration not installed"),
+                    "Missing integration shows an install link and hides the restart link");
+                form.InstallIntegrationAsync().GetAwaiter().GetResult();
+                Check(streamer.IntegrationInstalls == 1 && !install.Visible && banner.Text.Contains("Integration installed"),
+                    "Successful setup refreshes the integration indicator and hides the install link");
                 Check(left.Items.Count == 1 && right.Items.Count == 1, "UI seeds only installed cached VR games");
                 var presetButton=controls.OfType<Button>().Single(x=>x.Text=="Launch Preset");
                 var detailsButton=controls.OfType<Button>().Single(x=>x.Text=="Scan details");
@@ -229,6 +237,20 @@ internal static class SelfTests
                 streamer.Fail = false;
                 form.RestartStreamerAsync().GetAwaiter().GetResult();
                 Check(!restart.Visible && streamer.Restarts == 2, "Confirmed restart hides the message");
+                new FoveaSizePreferences(Path.Combine(Path.GetDirectoryName(uiPath)!, "FoveaSize.txt")).Save(30);
+                form.LoadPreview(scan);
+                Check(restart.Visible && restart.Enabled && restart.Text == "Restart Streamer to apply the Fovea Size change.",
+                    "Saving a fovea size shows a clickable notice even when library changes are applied");
+                form.RestartStreamerAsync().GetAwaiter().GetResult();
+                Check(!restart.Visible && streamer.AppliedFoveaSize == 30,
+                    "The fovea notice clears when the restarted helper confirms the saved size");
+                var stamp = new DateTime(2026, 11, 13, 12, 0, 0, DateTimeKind.Utc);
+                string[] foveaLogs = ["2026-11-13T11:59:00+00:00 [42] Applied fovea size: 30%.",
+                    "2026-11-13T12:00:00+00:00 [42] Applied fovea size: 25%.",
+                    "2026-11-13T12:00:00+00:00 [43] Applied fovea size: 30%."];
+                Check(!StreamerControl.MatchesFoveaSize(foveaLogs, 42, stamp, 30) &&
+                    StreamerControl.MatchesFoveaSize(foveaLogs, 42, stamp, 25),
+                    "Fovea confirmation ignores old processes and different sizes");
                 right.Items.Cast<ListViewItem>().Single(x => ((Game)x.Tag!).Id == "952060").Selected = true;
                 removeButton.PerformClick();
                 Check(left.Items.Count == 1 && right.Items.Count == 1 && new LibraryStore(uiPath).Load()!.Games.Count == 1, "Remove button moves RE3 back and saves");
@@ -274,11 +296,23 @@ internal static class SelfTests
             File.WriteAllLines(Path.Combine(root, "results.txt"), checks);
             var startup = new TestStartupRegistration();
             var bitratePreferences = new BitratePreferences(Path.Combine(root, "Bitrates", "BitrateOverrides.xml"));
+            var legacyBitratePath = Path.Combine(root, "legacy-bitrate.xml");
+            File.WriteAllText(legacyBitratePath, """
+                <BitrateOverrides version="1" enabled="true">
+                  <Profile headset="1000" h264="725" hevc="240" av1="250" />
+                </BitrateOverrides>
+                """);
+            var migrated = BitrateConfiguration.Read(legacyBitratePath);
+            migrated.WiFiProfiles[1000].Av1Mbps = 245;
+            Check(migrated.Enabled && migrated.EthernetProfiles[1000].Av1Mbps == 250 &&
+                migrated.EthernetProfiles[1000].H264Mbps == 725,
+                "Legacy bitrate profiles are copied independently to both connections");
             using (var profiles = new BitrateProfilesForm(bitratePreferences))
             {
                 profiles.ShowInTaskbar = false; profiles.StartPosition = FormStartPosition.Manual; profiles.Location = new Point(-20000, -20000); profiles.Show(); Application.DoEvents();
                 var fields = profiles.Controls[0].Controls.Cast<Control>().ToArray();
-                var headset = fields.OfType<ComboBox>().Single();
+                var headset = fields.OfType<ComboBox>().Single(x => x.AccessibleName == "Headset bitrate profile");
+                var connection = fields.OfType<ComboBox>().Single(x => x.AccessibleName == "Active connection profile");
                 var values = fields.OfType<NumericUpDown>().ToDictionary(x => x.AccessibleName!);
                 Check((int)headset.SelectedValue! == 1000 && values["H.264 / H.264+"].Value == 800 && values["H.265 / HEVC 10-bit"].Value == 222 && values["AV1 / AV1 10-bit"].Value == 222,
                     "Profiles window loads the Quest 3 defaults of 800, 222 and 222 Mbps");
@@ -286,10 +320,20 @@ internal static class SelfTests
                 headset.SelectedValue = 1001;
                 fields.OfType<CheckBox>().Single().Checked = true;
                 values["H.264 / H.264+"].Value = 800; values["H.265 / HEVC 10-bit"].Value = 275; values["AV1 / AV1 10-bit"].Value = 240;
+                connection.SelectedIndex = (int)BitrateConnection.Ethernet;
+                headset.SelectedValue = BitrateConfiguration.Quest3;
+                Check(values["AV1 / AV1 10-bit"].Value == 222, "Ethernet starts with its own Quest 3 defaults");
+                values["AV1 / AV1 10-bit"].Value = 310;
+                connection.SelectedIndex = (int)BitrateConnection.WiFi;
+                Check(values["AV1 / AV1 10-bit"].Value == 260, "Switching back restores the edited Wi-Fi values");
+                connection.SelectedIndex = (int)BitrateConnection.Ethernet;
                 using (var image = new Bitmap(profiles.Width, profiles.Height)) { profiles.DrawToBitmap(image, new Rectangle(Point.Empty, profiles.Size)); image.Save(Path.Combine(root, "bitrate-profiles-ui.png")); }
                 fields.OfType<Button>().Single(x => x.AccessibleName == "Save bitrate profiles").PerformClick();
                 var saved = VirtualDesktop.Unlock.BitrateConfiguration.Read(bitratePreferences.Path);
-                Check(saved.Profiles[1000].Av1Mbps == 260 && saved.Profiles[1001].Av1Mbps == 240 && saved.Profiles[1001].HevcMbps == 275 && !saved.Enabled, "Headset/codec edits persist separately without enabling the feature implicitly");
+                Check(saved.Connection == BitrateConnection.Ethernet && saved.EthernetProfiles[1000].Av1Mbps == 310 &&
+                    saved.WiFiProfiles[1000].Av1Mbps == 260 && saved.WiFiProfiles[1001].Av1Mbps == 240 &&
+                    saved.WiFiProfiles[1001].HevcMbps == 275 && !saved.EthernetProfiles.ContainsKey(1001) && !saved.Enabled,
+                    "Connection and headset profiles persist separately without enabling the feature implicitly");
             }
             var trayPath = Path.Combine(root, "Preferences", "Settings.json");
             var traySettings = new TraySettings(trayPath);
@@ -381,16 +425,29 @@ internal static class SelfTests
     {
         private HashSet<uint> applied = [111];
         private uint[] requested = [];
+        private int? requestedFoveaSize;
+        public int? AppliedFoveaSize { get; private set; }
         public bool Fail { get; set; }
         public bool IsRunning { get; set; } = true;
+        public bool IntegrationInstalled { get; set; } = true;
+        public int IntegrationInstalls { get; private set; }
+        public Task InstallIntegrationAsync()
+        {
+            IntegrationInstalls++;
+            IntegrationInstalled = true;
+            return Task.CompletedTask;
+        }
         public int Restarts { get; private set; }
         public bool IsApplied(IReadOnlyCollection<uint> ids)
         { requested = ids.ToArray(); return applied.SetEquals(ids); }
+        public bool IsFoveaSizeApplied(int size)
+        { requestedFoveaSize = size; return AppliedFoveaSize == size; }
         public Task RestartAsync()
         {
             Restarts++;
             if (Fail) return Task.FromException(new IOException("Simulated restart failure"));
             applied = requested.ToHashSet();
+            AppliedFoveaSize = requestedFoveaSize;
             return Task.CompletedTask;
         }
     }

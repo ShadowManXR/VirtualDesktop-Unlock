@@ -32,6 +32,14 @@ public static class BitrateHookTest
             var config=BitrateConfiguration.Defaults();config.Enabled=true;Apply(config);
             Check(Limit(1000,1,false)==800000000 && Limit(1000,2,false)==222000000 && Limit(1000,10,false)==222000000,
                 "Quest 3 defaults reach the bitrate hook");
+            config.EthernetProfiles[1000] = new BitrateProfile(900, 260, 270);
+            config.Connection = BitrateConnection.Ethernet;
+            Apply(config);
+            Check(Limit(1000,1,false)==900000000 && Limit(1000,2,false)==260000000 && Limit(1000,10,false)==270000000,
+                "Selecting Ethernet applies its independent codec ceilings");
+            config.Connection = BitrateConnection.WiFi;
+            Apply(config);
+            Check(Limit(1000,10,false)==222000000, "Switching back applies the Wi-Fi ceiling");
             // Keep the distinct HEVC and AV1 values used to verify encoder routing below.
             config.Profiles[1000]=new BitrateProfile(1000,300,250);Apply(config);
             foreach(int codec in new[]{1,5})Check(Limit(1000,codec,false)==1000000000,"Quest 3 H264/H264+ ceiling codec="+codec);

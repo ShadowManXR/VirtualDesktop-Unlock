@@ -7,6 +7,8 @@ using System.Xml;
 
 namespace VirtualDesktop.Unlock
 {
+    public enum BitrateConnection { WiFi, Ethernet }
+
     public sealed class BitrateProfile
     {
         public int H264Mbps;
@@ -21,7 +23,13 @@ namespace VirtualDesktop.Unlock
         public const int Quest3 = 1000;
         public static BitrateProfile CreateQuest3Profile() { return new BitrateProfile(800, 222, 222); }
         public bool Enabled;
-        public readonly Dictionary<int, BitrateProfile> Profiles = new Dictionary<int, BitrateProfile>();
+        public BitrateConnection Connection;
+        public readonly Dictionary<int, BitrateProfile> WiFiProfiles = new Dictionary<int, BitrateProfile>();
+        public readonly Dictionary<int, BitrateProfile> EthernetProfiles = new Dictionary<int, BitrateProfile>();
+        public Dictionary<int, BitrateProfile> Profiles
+        {
+            get { return Connection == BitrateConnection.Ethernet ? EthernetProfiles : WiFiProfiles; }
+        }
         public static string DefaultPath { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Virtual Desktop Unlock", "BitrateOverrides.xml"); } }
         public static readonly Dictionary<int, string> Headsets = new Dictionary<int, string> {
             {259,"Quest"},{320,"Quest 2"},{400,"Quest Pro"},{600,"Vive Focus 3"},{650,"Vive XR Elite"},
@@ -32,13 +40,15 @@ namespace VirtualDesktop.Unlock
         public static BitrateConfiguration Defaults()
         {
             var result = new BitrateConfiguration();
-            result.Profiles.Add(Quest3, CreateQuest3Profile());
+            result.WiFiProfiles.Add(Quest3, CreateQuest3Profile());
+            result.EthernetProfiles.Add(Quest3, CreateQuest3Profile());
             return result;
         }
         public BitrateConfiguration Copy()
         {
-            var copy = new BitrateConfiguration { Enabled = Enabled };
-            foreach (var pair in Profiles) copy.Profiles.Add(pair.Key, pair.Value.Copy());
+            var copy = new BitrateConfiguration { Enabled = Enabled, Connection = Connection };
+            foreach (var pair in WiFiProfiles) copy.WiFiProfiles.Add(pair.Key, pair.Value.Copy());
+            foreach (var pair in EthernetProfiles) copy.EthernetProfiles.Add(pair.Key, pair.Value.Copy());
             return copy;
         }
         public static BitrateConfiguration Read(string path)
@@ -49,19 +59,35 @@ namespace VirtualDesktop.Unlock
             using (var reader = XmlReader.Create(path, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 65536 }))
             {
                 reader.MoveToContent();
-                if (reader.Name != "BitrateOverrides" || reader.GetAttribute("version") != "1" || !Boolean.TryParse(reader.GetAttribute("enabled"), out result.Enabled))
+                string version = reader.GetAttribute("version");
+                bool legacy = version == "1";
+                if (reader.Name != "BitrateOverrides" || (!legacy && version != "2") ||
+                    !Boolean.TryParse(reader.GetAttribute("enabled"), out result.Enabled))
                     throw new InvalidDataException("Invalid bitrate configuration header.");
+                if (!legacy) result.Connection = ReadConnection(reader.GetAttribute("connection"));
                 while (reader.Read())
                 {
                     if (reader.NodeType != XmlNodeType.Element) continue;
                     int headset;
-                    if (reader.Name != "Profile" || reader.Depth != 1 || !Int32.TryParse(reader.GetAttribute("headset"), out headset) || !Headsets.ContainsKey(headset) || result.Profiles.ContainsKey(headset))
+                    if (reader.Name != "Profile" || reader.Depth != 1 || !Int32.TryParse(reader.GetAttribute("headset"), out headset) || !Headsets.ContainsKey(headset))
                         throw new InvalidDataException("Invalid or duplicate headset bitrate profile.");
-                    result.Profiles.Add(headset, new BitrateProfile(ReadMbps(reader,"h264"), ReadMbps(reader,"hevc"), ReadMbps(reader,"av1")));
+                    var profiles = legacy || ReadConnection(reader.GetAttribute("connection")) == BitrateConnection.WiFi
+                        ? result.WiFiProfiles : result.EthernetProfiles;
+                    if (profiles.ContainsKey(headset)) throw new InvalidDataException("Invalid or duplicate headset bitrate profile.");
+                    var profile = new BitrateProfile(ReadMbps(reader,"h264"), ReadMbps(reader,"hevc"), ReadMbps(reader,"av1"));
+                    profiles.Add(headset, profile);
+                    if (legacy) result.EthernetProfiles.Add(headset, profile.Copy());
                 }
             }
             return result;
         }
+        private static BitrateConnection ReadConnection(string value)
+        {
+            if (value == "WiFi") return BitrateConnection.WiFi;
+            if (value == "Ethernet") return BitrateConnection.Ethernet;
+            throw new InvalidDataException("Invalid bitrate connection.");
+        }
+
         private static int ReadMbps(XmlReader reader, string name)
         {
             int value;
@@ -76,20 +102,30 @@ namespace VirtualDesktop.Unlock
             {
                 using (var writer = XmlWriter.Create(temp, new XmlWriterSettings { Indent = true, Encoding = new UTF8Encoding(false) }))
                 {
-                    writer.WriteStartElement("BitrateOverrides"); writer.WriteAttributeString("version","1"); writer.WriteAttributeString("enabled", Enabled ? "true" : "false");
-                    var keys = new List<int>(Profiles.Keys); keys.Sort();
-                    foreach (int headset in keys)
-                    {
-                        var p = Profiles[headset];
-                        if (!Headsets.ContainsKey(headset) || p.H264Mbps < 10 || p.H264Mbps > 2000 || p.HevcMbps < 10 || p.HevcMbps > 2000 || p.Av1Mbps < 10 || p.Av1Mbps > 2000) throw new InvalidDataException("Invalid bitrate profile.");
-                        writer.WriteStartElement("Profile"); writer.WriteAttributeString("headset",headset.ToString());
-                        writer.WriteAttributeString("h264",p.H264Mbps.ToString()); writer.WriteAttributeString("hevc",p.HevcMbps.ToString()); writer.WriteAttributeString("av1",p.Av1Mbps.ToString()); writer.WriteEndElement();
-                    }
+                    writer.WriteStartElement("BitrateOverrides");
+                    writer.WriteAttributeString("version", "2");
+                    writer.WriteAttributeString("connection", ReadConnection(Connection.ToString()).ToString());
+                    writer.WriteAttributeString("enabled", Enabled ? "true" : "false");
+                    WriteProfiles(writer, BitrateConnection.WiFi, WiFiProfiles);
+                    WriteProfiles(writer, BitrateConnection.Ethernet, EthernetProfiles);
                     writer.WriteEndElement();
                 }
                 if (File.Exists(path)) File.Replace(temp,path,path+".bak"); else File.Move(temp,path);
             }
             finally { if (File.Exists(temp)) File.Delete(temp); }
+        }
+
+        private static void WriteProfiles(XmlWriter writer, BitrateConnection connection, Dictionary<int, BitrateProfile> profiles)
+        {
+            var keys = new List<int>(profiles.Keys); keys.Sort();
+            foreach (int headset in keys)
+            {
+                var p = profiles[headset];
+                if (!Headsets.ContainsKey(headset) || p.H264Mbps < 10 || p.H264Mbps > 2000 || p.HevcMbps < 10 || p.HevcMbps > 2000 || p.Av1Mbps < 10 || p.Av1Mbps > 2000) throw new InvalidDataException("Invalid bitrate profile.");
+                writer.WriteStartElement("Profile"); writer.WriteAttributeString("headset",headset.ToString());
+                writer.WriteAttributeString("connection", connection.ToString());
+                writer.WriteAttributeString("h264",p.H264Mbps.ToString()); writer.WriteAttributeString("hevc",p.HevcMbps.ToString()); writer.WriteAttributeString("av1",p.Av1Mbps.ToString()); writer.WriteEndElement();
+            }
         }
         public static string Revision(string path)
         {
@@ -98,8 +134,8 @@ namespace VirtualDesktop.Unlock
         }
         public int Limit(int headset, int codec, int stock)
         {
-            if (!Enabled || !Profiles.ContainsKey(headset)) return stock;
-            var profile = Profiles[headset];
+            BitrateProfile profile;
+            if (!Enabled || !Profiles.TryGetValue(headset, out profile)) return stock;
             int requested = codec == 1 || codec == 5 ? profile.H264Mbps : codec == 2 || codec == 6 ? profile.HevcMbps : codec == 10 || codec == 11 ? profile.Av1Mbps : 0;
             return requested == 0 ? stock : Math.Max(stock, checked(requested * 1000000));
         }

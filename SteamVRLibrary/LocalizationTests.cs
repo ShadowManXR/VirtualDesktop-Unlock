@@ -74,6 +74,13 @@ internal static class LocalizationTests
         check(Localizer.Code=="ru","Language chosen in Settings persists for the next launch");
         Localizer.Select("en",false);
     }
-    private sealed class PreviewStreamer:IStreamerControl { public bool IsRunning=>true;public bool IsApplied(IReadOnlyCollection<uint> ids)=>true;public Task RestartAsync()=>Task.CompletedTask; }
+    private sealed class PreviewStreamer:IStreamerControl
+    {
+        public bool IsRunning => true;
+        public bool IntegrationInstalled => true;
+        public bool IsApplied(IReadOnlyCollection<uint> ids) => true;
+        public Task RestartAsync() => Task.CompletedTask;
+        public Task InstallIntegrationAsync() => Task.CompletedTask;
+    }
     private sealed class PreviewStartup:IStartupRegistration { public bool Enabled=>false;public void SetEnabled(bool enabled){} }
 }

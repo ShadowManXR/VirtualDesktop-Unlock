@@ -129,7 +129,7 @@ namespace VirtualDesktop.LibraryOverrides
                 failedRevision = null;
                 if (notify) NotifyTargets();
                 WriteStatus(true,null);
-                log("Bitrate profiles applied; enabled="+next.Enabled+"; revision="+revision+"; Quest3 ceilings="+Dispatch(1000,1,false)+","+Dispatch(1000,2,false)+","+Dispatch(1000,10,false));
+                log("Bitrate profiles applied; enabled="+next.Enabled+"; connection profile="+next.Connection+"; revision="+revision+"; Quest3 ceilings="+Dispatch(1000,1,false)+","+Dispatch(1000,2,false)+","+Dispatch(1000,10,false));
             }
             catch (Exception e)
             {

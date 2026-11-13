@@ -9,9 +9,9 @@ using System.Xml;
 using System.Security.Cryptography;
 using VirtualDesktop.Unlock;
 
-[assembly: AssemblyVersion("0.2.7.0")]
+[assembly: AssemblyVersion("0.3.0.0")]
 [assembly: AssemblyTitle("Virtual Desktop Library Overrides")]
-[assembly: AssemblyFileVersion("0.2.7.0")]
+[assembly: AssemblyFileVersion("0.3.0.0")]
 
 namespace VirtualDesktop.LibraryOverrides
 {
@@ -96,6 +96,15 @@ namespace VirtualDesktop.LibraryOverrides
                     {
                         try { BitrateRuntime.Install(assembly,Log); }
                         catch (Exception e) { Log("Bitrate hook unavailable; original bitrate behavior retained: "+e); }
+                        if (updated && String.IsNullOrEmpty(testDirectory))
+                        {
+                            try
+                            {
+                                int? size = ApplyFoveaSize(assembly, new FoveaSizePreferences(FoveaSizePreferences.DefaultPath));
+                                if (size.HasValue) Log("Applied fovea size: " + size.Value + "%.");
+                            }
+                            catch (Exception e) { Log("Could not apply fovea size: " + e.GetBaseException().Message); }
+                        }
                         try
                         {
                             LaunchPresetRuntime.Install(assembly, Log);
@@ -118,6 +127,34 @@ namespace VirtualDesktop.LibraryOverrides
                 // Fail open for normal Streamer startup; the original program remains usable.
                 Log("Override failed: " + e);
             }
+        }
+
+        private static int? ApplyFoveaSize(Assembly assembly, FoveaSizePreferences preferences)
+        {
+            int? saved = preferences.Read();
+            if (!saved.HasValue) return null;
+            var type = assembly.GetType("VirtualDesktop.Streamer.StreamerSettings", true);
+            var settings = type.GetProperty("Default", BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
+                .GetValue(null, null);
+            if (settings == null) throw new InvalidOperationException("Streamer settings are unavailable.");
+            float requested = saved.Value / 100f;
+            var property = type.GetProperty("FoveaSize");
+            if (saved.Value >= 15 && saved.Value <= 35)
+            {
+                property.SetValue(settings, requested, null);
+            }
+            else
+            {
+                // The verified setter clamps to 0.15–0.35. Set its backing field
+                // before Streamer reads it to initialize the foveated stream.
+                var field = assembly.ManifestModule.ResolveField(0x0400026D);
+                if (field.DeclaringType != type || field.Name != "_foveaSize" || field.FieldType != typeof(float) || field.IsStatic)
+                    throw new NotSupportedException("Streamer fovea size field changed.");
+                field.SetValue(settings, requested);
+            }
+            if ((float)property.GetValue(settings, null) != requested)
+                throw new InvalidOperationException("Streamer did not retain the requested fovea size.");
+            return saved;
         }
 
         private static uint[] ReadOverrides()

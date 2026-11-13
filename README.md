@@ -2,7 +2,7 @@
 
 # Virtual Desktop Unlock
 
-**v0.2.7** · Windows x64 · Unofficial · MIT
+**v0.3.0-alpha** · Windows x64 · Unofficial · MIT
 
 An unofficial program for extending Virtual Desktop Streaming. Modifications are applied only to the back-end server component installed on Windows; the client requires no modification. Add custom Steam games, including games that use third-party VR mods, to Virtual Desktop's actual headset Games tab using the optional runtime helper. The desktop companion app organizes your installed Steam games, saves selections for the helper, and provides optional headset-specific bitrate ceilings. There is also an option to set application launch presets, such as for FPS, quality, and FOV tangent.
 
@@ -22,6 +22,8 @@ An unofficial program for extending Virtual Desktop Streaming. Modifications are
 ## Download and run
 
 Download the archive from [Release](https://github.com/ShadowManXR/VirtualDesktop-Unlock/releases)
+
+Run **Install Streamer Helper.exe** to enable VD Unlock's Streamer features, including applying your game library. Setup detects the Streamer installation and lets you browse to `VirtualDesktop.Streamer.exe` if needed. Use the setup executable included in the archive or download it separately.
 
 Launch the Virtual Desktop Unlock program; you can then close the window, as the application will remain in the system tray. For its features to be available, the program must be running in the background; to ensure this, select the option in the application settings to have it launch automatically when Windows starts.
 

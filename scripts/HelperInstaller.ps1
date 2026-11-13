@@ -11,7 +11,7 @@ $config=Join-Path $StreamerDirectory 'VirtualDesktop.Streamer.exe.config'
 $recordPath=Join-Path $StreamerDirectory 'VirtualDesktop.LibraryOverrides.install.json'
 $payload=Join-Path $PSScriptRoot 'runtime-override'
 $manifest=Get-Content -LiteralPath (Join-Path $payload 'manifest.json') -Raw | ConvertFrom-Json
-$action=if($Uninstall){'Remove the optional RE3 startup helper and restart Streamer'}else{'Install the optional RE3 startup helper and restart Streamer'}
+$action=if($Uninstall){'Remove the VD Unlock Streamer helper and restart Streamer'}else{'Install the VD Unlock Streamer helper and restart Streamer'}
 if(!$PSCmdlet.ShouldProcess($StreamerDirectory,$action)){return}
 
 $principal=New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -26,6 +26,7 @@ if(!$principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
 }
 
 $logFolder=Join-Path $env:ProgramData 'Virtual Desktop Unlock'
+$locationKey='HKLM:\SOFTWARE\Virtual Desktop Unlock'
 New-Item -ItemType Directory -Path $logFolder -Force | Out-Null
 Start-Transcript -LiteralPath (Join-Path $logFolder 'installer.log') -Append | Out-Null
 try{
@@ -45,7 +46,7 @@ try{
             if((Get-FileHash -LiteralPath $item[0]).Hash -ne $item[1]){throw 'Release payload hash check failed.'}
         }
         if($record -and $record.Product -ne 'Virtual Desktop Unlock'){throw 'Unknown existing installation record.'}
-        foreach($item in @(@($dll,$manifest.HelperSHA256),@($config,$manifest.ConfigSHA256))){
+        foreach($item in @(@($dll,$record.HelperSHA256),@($config,$record.ConfigSHA256))){
             if((Test-Path -LiteralPath $item[0]) -and (!$record -or (Get-FileHash -LiteralPath $item[0]).Hash -ne $item[1])){throw ('An unrelated or different-version file already exists: '+$item[0]+'. Remove that helper with its original uninstaller before installing this release.')}
         }
     }
@@ -54,11 +55,18 @@ try{
     if($processes.Count){$processes | Wait-Process -Timeout 15 -ErrorAction Stop}
     if($Uninstall){
         foreach($path in @($config,$dll,$recordPath)){if(Test-Path -LiteralPath $path){Remove-Item -LiteralPath $path}}
+        if((Get-ItemProperty -LiteralPath $locationKey -ErrorAction SilentlyContinue).StreamerExecutable -eq $exe){
+            Remove-ItemProperty -LiteralPath $locationKey -Name StreamerExecutable
+        }
         Start-Process -FilePath $exe -WorkingDirectory $StreamerDirectory -WindowStyle Hidden
         'Removed the startup helper. The signed Streamer executable is unchanged.'
         return
     }
     $process=$null
+    $previousFiles=@{}
+    foreach($path in @($dll,$config,$recordPath)){
+        if(Test-Path -LiteralPath $path){$previousFiles[$path]=[IO.File]::ReadAllBytes($path)}
+    }
     try{
         Copy-Item -LiteralPath (Join-Path $payload 'VirtualDesktop.LibraryOverrides.dll') -Destination $dll -Force
         Copy-Item -LiteralPath (Join-Path $payload 'VirtualDesktop.Streamer.exe.config') -Destination $config -Force
@@ -66,11 +74,16 @@ try{
         if($process.WaitForExit(4000)){throw ('Streamer exited during startup: '+$process.ExitCode)}
         if((Get-FileHash -LiteralPath $exe).Hash -notin $supportedHashes){throw 'Streamer executable changed unexpectedly.'}
         [pscustomobject]@{Product='Virtual Desktop Unlock';Version=$manifest.Version;HelperSHA256=$manifest.HelperSHA256;ConfigSHA256=$manifest.ConfigSHA256;Installed=[DateTimeOffset]::Now.ToString('O')} | ConvertTo-Json | Set-Content -LiteralPath $recordPath
-        'Installed RE3 integration. Reconnect the headset and reopen Virtual Desktop Games.'
+        if(!(Test-Path -LiteralPath $locationKey)){New-Item -Path $locationKey | Out-Null}
+        New-ItemProperty -LiteralPath $locationKey -Name StreamerExecutable -Value $exe -PropertyType String -Force | Out-Null
+        'Installed the VD Unlock Streamer helper. Reconnect the headset and reopen Virtual Desktop Games.'
     }catch{
         $failure=$_
         if($process){Get-Process -Id $process.Id -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue}
-        foreach($path in @($config,$dll,$recordPath)){if(Test-Path -LiteralPath $path){Remove-Item -LiteralPath $path}}
+        foreach($path in @($config,$dll,$recordPath)){
+            if($previousFiles.ContainsKey($path)){[IO.File]::WriteAllBytes($path,$previousFiles[$path])}
+            elseif(Test-Path -LiteralPath $path){Remove-Item -LiteralPath $path}
+        }
         Start-Process -FilePath $exe -WorkingDirectory $StreamerDirectory -WindowStyle Hidden
         throw $failure
     }

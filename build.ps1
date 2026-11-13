@@ -2,7 +2,7 @@
 param([string]$StreamerPath,[switch]$SkipTests)
 $ErrorActionPreference='Stop'
 $root=$PSScriptRoot
-$version='0.2.7'
+$version='0.3.0-alpha'
 $env:DOTNET_CLI_HOME=Join-Path $root '.dotnet-build'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'
 $env:DOTNET_GENERATE_ASPNET_CERTIFICATE='false'
@@ -41,7 +41,7 @@ $ventureSources=@('/reference:System.Web.Extensions.dll','/reference:System.Draw
     (Join-Path $root 'src\RuntimeOverrides\VentureGameProcess.cs'),
     (Join-Path $root 'Shared\VenturePreferences.cs'))
 $remapSources=@((Join-Path $root 'src\RuntimeOverrides\ButtonRemapRuntime.cs'),(Join-Path $root 'Shared\ButtonRemapProfile.cs'))
-& $compiler /nologo /target:library ('/out:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) $references $ventureSources $remapSources (Join-Path $root 'src\RuntimeOverrides\LibraryOverrides.cs') (Join-Path $root 'src\RuntimeOverrides\BitrateRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRecovery.cs') (Join-Path $root 'src\RuntimeOverrides\SteamGameLifetime.cs') (Join-Path $root 'Shared\LaunchPresetConfiguration.cs') (Join-Path $root 'Shared\BitrateConfiguration.cs')
+& $compiler /nologo /target:library ('/out:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) $references $ventureSources $remapSources (Join-Path $root 'src\RuntimeOverrides\LibraryOverrides.cs') (Join-Path $root 'src\RuntimeOverrides\BitrateRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRecovery.cs') (Join-Path $root 'src\RuntimeOverrides\SteamGameLifetime.cs') (Join-Path $root 'Shared\LaunchPresetConfiguration.cs') (Join-Path $root 'Shared\BitrateConfiguration.cs') (Join-Path $root 'Shared\FoveaSizePreferences.cs')
 if($LASTEXITCODE -ne 0){throw 'Runtime helper build failed.'}
 Copy-Item -LiteralPath (Join-Path $root 'src\RuntimeOverrides\RuntimeHook.config') -Destination (Join-Path $hook 'VirtualDesktop.Streamer.exe.config')
 [pscustomobject]@{Version=$version;StreamerVersion='1.34.25.0';StreamerSHA256='0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8';SupportedStreamers=@(@{Version='1.34.23.0';SHA256='FEAD548C57DF539006E6C97A7A29D46FDE172F756F40D65DBDB77ABAAFA3AEAD'},@{Version='1.34.25.0';SHA256='0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8'});HelperSHA256=(Get-FileHash -LiteralPath (Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')).Hash;ConfigSHA256=(Get-FileHash -LiteralPath (Join-Path $hook 'VirtualDesktop.Streamer.exe.config')).Hash} | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $hook 'manifest.json')
@@ -138,7 +138,18 @@ if(!$SkipTests){
 foreach($name in @('Virtual Desktop Unlock.exe','Virtual Desktop Unlock.dll','Virtual Desktop Unlock.deps.json','Virtual Desktop Unlock.runtimeconfig.json')){Copy-Item -LiteralPath (Join-Path $publish $name) -Destination $stage}
 New-Item -ItemType Directory -Path (Join-Path $stage 'runtime-override') -Force | Out-Null
 foreach($name in @('VirtualDesktop.LibraryOverrides.dll','VirtualDesktop.Streamer.exe.config','manifest.json')){Copy-Item -LiteralPath (Join-Path $hook $name) -Destination (Join-Path $stage 'runtime-override')}
-Get-ChildItem -LiteralPath (Join-Path $root 'scripts') -File | Copy-Item -Destination $stage
+Get-ChildItem -LiteralPath (Join-Path $root 'scripts') -File |
+    Where-Object { $_.Extension -in '.cmd','.ps1' } | Copy-Item -Destination $stage
+$setupName='Install Streamer Helper.exe'
+$setupResources=@("/resource:$root\scripts\HelperInstaller.ps1,HelperInstaller.ps1")
+foreach($name in @('VirtualDesktop.LibraryOverrides.dll','VirtualDesktop.Streamer.exe.config','manifest.json')){
+    $setupResources+=("/resource:"+(Join-Path $hook $name)+","+$name)
+}
+$setupOptions=@('/nologo','/target:winexe','/platform:x64','/reference:System.Windows.Forms.dll',
+    ('/out:'+(Join-Path $stage $setupName)),('/win32icon:'+(Join-Path $root 'assets\icon.ico')),
+    ('/win32manifest:'+(Join-Path $root 'scripts\StreamerSetup.manifest')))
+& $compiler $setupOptions $setupResources (Join-Path $root 'scripts\StreamerSetup.cs') (Join-Path $root 'Shared\StreamerLocation.cs')
+if($LASTEXITCODE -ne 0){throw 'Streamer setup build failed.'}
 foreach($name in @('README.md','LICENSE','CHANGELOG.md','TESTING.md')){Copy-Item -LiteralPath (Join-Path $root $name) -Destination $stage}
 New-Item -ItemType Directory -Path (Join-Path $stage 'assets') -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $root 'assets\README.md') -Destination (Join-Path $stage 'assets\README.md')
@@ -146,5 +157,10 @@ $zip=Join-Path $dist ('VirtualDesktopUnlock-v'+$version+'-win-x64.zip')
 Compress-Archive -LiteralPath $stage -DestinationPath $zip -Force
 $sum=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()+'  '+(Split-Path -Leaf $zip)
 $sum | Set-Content -LiteralPath ($zip+'.sha256') -Encoding ASCII
+$setup=Join-Path $dist ('VirtualDesktopUnlock-v'+$version+'-Streamer-Setup.exe')
+Copy-Item -LiteralPath (Join-Path $stage $setupName) -Destination $setup -Force
+((Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()+'  '+(Split-Path -Leaf $setup)) |
+    Set-Content -LiteralPath ($setup+'.sha256') -Encoding ASCII
+Write-Output ('Streamer setup: '+$setup)
 Write-Output ('Release: '+$zip)
 Write-Output ('Staging directory: '+$stage)

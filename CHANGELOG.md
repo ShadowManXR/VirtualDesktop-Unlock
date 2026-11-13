@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0-alpha — 2026-11-13
+
+- Add standalone Streamer Setup with install location detection and a file picker.
+- Show integration status and an install link in the main window.
+- Expand Fovea Size to 0.05–0.40 and show a restart notice after saving a change.
+
+## 0.2.9 — 2026-11-13
+
+- Adjust the high-detail region for foveated streaming in Settings. The control starts at Virtual Desktop's 0.25 default.
+
+## 0.2.8 — 2026-11-13
+
+- Save separate Wi-Fi and Ethernet bitrate settings per headset and codec. Select the active profile in Bitrate Profiles.
+- Use existing bitrate settings as the starting point for both connection profiles.
+
 ## 0.2.7 — 2026-11-13
 
 - Enable experimental bitrate overrides for the verified Streamer 1.34.25.0 x64 binary.

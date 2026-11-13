@@ -94,7 +94,13 @@ public sealed class LibraryForm : Form
     private readonly Label status = TextLabel("Loading…", Muted, 9);
     private readonly Label connectionStatus = TextLabel("", Accent, 10);
     private readonly LinkLabel restart = new() { Text = "Restart Streamer and reconnect to apply custom additions", Dock = DockStyle.Top, AutoSize = true, TextAlign = ContentAlignment.MiddleLeft, LinkColor = Accent, ActiveLinkColor = Color.White, VisitedLinkColor = Accent, Visible = false, AccessibleName = "Restart Streamer" };
+    private readonly LinkLabel installIntegration = new()
+    {
+        Dock = DockStyle.Top, AutoSize = true, Visible = false, AccessibleName = "Install Virtual Desktop integration",
+        LinkColor = Color.FromArgb(255, 171, 83), VisitedLinkColor = Color.FromArgb(255, 171, 83), ActiveLinkColor = Color.White
+    };
     private readonly IStreamerControl streamerControl;
+    private readonly FoveaSizePreferences foveaPreferences;
     private readonly System.Windows.Forms.Timer restartTimer = new() { Interval = 3000 };
     private uint[]? syncedIds;
     private readonly Button add = MakeButton("Add to VR  →", primary: true);
@@ -115,6 +121,8 @@ public sealed class LibraryForm : Form
         this.preview = preview;
         this.streamerControl = streamerControl ?? new StreamerControl();
         store = new LibraryStore(libraryPath ?? Path.Combine(AppContext.BaseDirectory, "Data", "library.json"));
+        foveaPreferences = new FoveaSizePreferences(preview || libraryPath != null
+            ? Path.Combine(Path.GetDirectoryName(store.Path)!, "FoveaSize.txt") : FoveaSizePreferences.DefaultPath);
         launchPresetStore = new LaunchPresetStore(preview || libraryPath != null
             ? Path.Combine(Path.GetDirectoryName(store.Path)!, "LaunchPresets.xml") : VirtualDesktop.Unlock.LaunchPresetConfiguration.DefaultPath);
         this.traySettings = traySettings ?? new TraySettings(preview || libraryPath != null
@@ -146,12 +154,13 @@ public sealed class LibraryForm : Form
         AutoScaleMode = AutoScaleMode.Dpi;
         AutoScaleDimensions = new SizeF(96F, 96F);
 
-        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(28, 22, 28, 18), ColumnCount = 1, RowCount = 9, BackColor = Background, AutoSize = false };
+        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(28, 22, 28, 18), ColumnCount = 1, RowCount = 10, BackColor = Background, AutoSize = false };
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -274,6 +283,9 @@ public sealed class LibraryForm : Form
         root.Controls.Add(status, 0, 6);
         root.Controls.Add(restart, 0, 7);
         root.Controls.Add(bitrateStatus, 0, 8);
+        Localizer.SetText(installIntegration, "Virtual Desktop integration is not installed. Click to install.");
+        root.Controls.Add(installIntegration, 0, 9);
+        installIntegration.LinkClicked += async (_, _) => await InstallIntegrationAsync();
         Localizer.SetToolTip(tip, restart, "Close and relaunch Streamer, then reconnect your headset. Windows may request administrator permission.");
         restart.LinkClicked += async (_, _) => await RestartStreamerAsync();
         restartTimer.Tick += (_, _) => UpdateRestartNotice();
@@ -437,6 +449,7 @@ public sealed class LibraryForm : Form
     {
         UpdateRestartNotice();
         restart.Enabled = ready && !busy;
+        installIntegration.Enabled = !busy;
         bitrate.Enabled = bitrateProfiles.Enabled = !busy;
         launchPresets.Enabled = remapButtons.Enabled = ready && !busy && vr.SelectedItems.Count == 1;
         details.Enabled = ready && !busy && SelectedGameForDetails() != null;
@@ -543,15 +556,37 @@ public sealed class LibraryForm : Form
     private void UpdateRestartNotice()
     {
         UpdateGameColors();
-        UpdateConnectionStatus();
+        bool installed = streamerControl.IntegrationInstalled;
+        UpdateConnectionStatus(installed);
+        installIntegration.Visible = !installed;
         string previousBitrateText=bitrate.Text;
         Localizer.SetText(bitrate,bitratePreferences.Configuration.Enabled ? "Restore bitrate limits" : "Remove bitrate limits");
         if(previousBitrateText!=bitrate.Text)AdjustLocalizedLayout();
         bitrateStatus.Text = bitratePreferences.StatusText;
-        if (!busy) restart.Visible = (syncedIds != null && !streamerControl.IsApplied(syncedIds)) || bitratePreferences.RequiresRestart;
+        if (!busy)
+        {
+            bool foveaPending = FoveaSizeRequiresRestart();
+            Localizer.SetText(restart, foveaPending
+                ? "Restart Streamer to apply the Fovea Size change."
+                : "Restart Streamer and reconnect to apply custom additions");
+            restart.Visible = installed && (foveaPending || (syncedIds != null && !streamerControl.IsApplied(syncedIds)) ||
+                bitratePreferences.RequiresRestart);
+        }
     }
 
-    internal void UpdateConnectionStatus()
+    private bool FoveaSizeRequiresRestart()
+    {
+        try { return foveaPreferences.Read() is int size && !streamerControl.IsFoveaSizeApplied(size); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException) { return false; }
+    }
+
+    private bool RestartChangesPending() =>
+        (syncedIds != null && !streamerControl.IsApplied(syncedIds)) ||
+        bitratePreferences.RequiresRestart || FoveaSizeRequiresRestart();
+
+    internal void UpdateConnectionStatus() => UpdateConnectionStatus(streamerControl.IntegrationInstalled);
+
+    private void UpdateConnectionStatus(bool integrationInstalled)
     {
         bool running = streamerControl.IsRunning;
         var iconState = StatusIcons.Select(running, ready);
@@ -565,27 +600,47 @@ public sealed class LibraryForm : Form
         trayIcon.Text = trayText.Length > 63 ? trayText[..63] : trayText;
         bool steamInstalled = File.Exists(Path.Combine(SteamScanner.InstallationPath, "steam.exe"));
         bool ventureInstalled = File.Exists(VirtualDesktop.Unlock.VenturePreferences.LauncherPath);
-        Localizer.SetText(connectionStatus, "VIRTUAL DESKTOP   ·   Streamer: {0}   ·   Library: {1}   ·   {2}   ·   {3}",
+        Localizer.SetText(connectionStatus, "VIRTUAL DESKTOP   ·   Streamer: {0}   ·   Library: {1}   ·   {2}   ·   {3}   ·   {4}",
             Localizer.T(running ? "Running" : "Not running"),
             Localizer.T(ready ? "Loaded" : "Not loaded"),
             Localizer.T(steamInstalled ? "{0} detected" : "{0} not detected", "Steam"),
-            Localizer.T(ventureInstalled ? "{0} detected" : "{0} not detected", "Venture"));
+            Localizer.T(ventureInstalled ? "{0} detected" : "{0} not detected", "Venture"),
+            Localizer.T(integrationInstalled ? "Integration installed" : "Integration not installed"));
         connectionStatus.BackColor = !ready ? Color.FromArgb(83, 52, 18)
             : running ? Color.FromArgb(22, 48, 49) : Color.FromArgb(77, 28, 36);
         connectionStatus.ForeColor = !ready ? Color.FromArgb(255, 192, 105)
             : running ? Accent : Color.FromArgb(255, 151, 160);
     }
 
+    internal async Task InstallIntegrationAsync()
+    {
+        if (busy || streamerControl.IntegrationInstalled) return;
+        busy = true;
+        UpdateButtons();
+        try { await streamerControl.InstallIntegrationAsync(); }
+        catch (System.ComponentModel.Win32Exception error) when (error.NativeErrorCode == 1223) { }
+        catch (Exception error)
+        {
+            if (!IsDisposed) LocalizedMessageBox.Show(this, error, "Could not start the Streamer setup.",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        finally
+        {
+            busy = false;
+            if (!IsDisposed) UpdateButtons();
+        }
+    }
+
     internal async Task RestartStreamerAsync()
     {
-        if (busy || syncedIds == null) return;
+        if (busy || (syncedIds == null && !FoveaSizeRequiresRestart())) return;
         busy = true; UpdateButtons(); Localizer.SetText(status, "Restarting Streamer…");
         try
         {
             await streamerControl.RestartAsync();
             var deadline = DateTime.UtcNow.AddSeconds(10);
-            while ((!streamerControl.IsApplied(syncedIds) || bitratePreferences.RequiresRestart) && DateTime.UtcNow < deadline) await Task.Delay(250);
-            if (!streamerControl.IsApplied(syncedIds) || bitratePreferences.RequiresRestart) throw new IOException(Localizer.T("Streamer restarted, but the helper has not confirmed your changes. Check the integration installation."));
+            while (RestartChangesPending() && DateTime.UtcNow < deadline) await Task.Delay(250);
+            if (RestartChangesPending()) throw new IOException(Localizer.T("Streamer restarted, but the helper has not confirmed your changes. Check the integration installation."));
             Localizer.SetText(status, "Streamer restarted. Reconnect your headset and reopen Games.");
         }
         catch (Exception e)
@@ -625,9 +680,11 @@ public sealed class LibraryForm : Form
         RestoreAndActivate();
         using var dialog = new SettingsForm(new WindowsStartupRegistration(), traySettings: traySettings,
             bitratePreferences: bitratePreferences,
-            venturePreferences: new VirtualDesktop.Unlock.VenturePreferences(VirtualDesktop.Unlock.VenturePreferences.DefaultPath));
+            venturePreferences: new VirtualDesktop.Unlock.VenturePreferences(VirtualDesktop.Unlock.VenturePreferences.DefaultPath),
+            foveaPreferences: foveaPreferences);
         dialog.Icon = Icon;
         dialog.ShowDialog(this);
+        UpdateRestartNotice();
     }
 
     private void TraySettingChanged(object? sender, EventArgs e)

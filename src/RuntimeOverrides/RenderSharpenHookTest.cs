@@ -36,6 +36,22 @@ class RenderSharpenHookTest
             type.GetField("_renderResolutionOverride",Flags).SetValue(settings,1f);
             type.GetField("_sharpening",Flags).SetValue(settings,0.7f);
             type.GetField("_useSharpening",Flags).SetValue(settings,false);
+            var helper = Assembly.LoadFrom(args[2]);
+            var preferencesType = helper.GetType("VirtualDesktop.Unlock.FoveaSizePreferences", true);
+            var preferencePath = Path.Combine(args[1], Guid.NewGuid().ToString("N") + ".txt");
+            var preferences = Activator.CreateInstance(preferencesType, preferencePath);
+            var applyFoveaSize = helper.GetType("VirtualDesktop.LibraryOverrides.Manager", true)
+                .GetMethod("ApplyFoveaSize", BindingFlags.Static | BindingFlags.NonPublic);
+            var foveaSize = type.GetProperty("FoveaSize");
+            foveaSize.SetValue(settings, 0.28f, null);
+            applyFoveaSize.Invoke(null, new[] { assembly, preferences });
+            Check((float)foveaSize.GetValue(settings, null) == 0.28f, "A missing override preserves Streamer's fovea size");
+            foreach (int size in new[] { 5, 15, 35, 40, 25 })
+            {
+                preferencesType.GetMethod("Save").Invoke(preferences, new object[] { size });
+                applyFoveaSize.Invoke(null, new[] { assembly, preferences });
+                Check((float)foveaSize.GetValue(settings, null) == size / 100f, "Streamer reads the exact saved fovea size: " + size + "%");
+            }
             var renderHandler=(MethodInfo)assembly.ManifestModule.ResolveMethod(0x06000433);
             var toggleHandler=(MethodInfo)assembly.ManifestModule.ResolveMethod(0x06000434);
             var amountHandler=(MethodInfo)assembly.ManifestModule.ResolveMethod(0x06000435);

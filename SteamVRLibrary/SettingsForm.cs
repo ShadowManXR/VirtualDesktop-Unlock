@@ -50,20 +50,22 @@ public sealed class WindowsStartupRegistration : IStartupRegistration
 
 public sealed class SettingsForm : Form
 {
-    public SettingsForm(IStartupRegistration startup, bool showErrors = true, TraySettings? traySettings = null, BitratePreferences? bitratePreferences = null, VenturePreferences? venturePreferences = null)
+    public SettingsForm(IStartupRegistration startup, bool showErrors = true, TraySettings? traySettings = null,
+        BitratePreferences? bitratePreferences = null, VenturePreferences? venturePreferences = null,
+        FoveaSizePreferences? foveaPreferences = null)
     {
         Text = "Settings — Virtual Desktop Unlock";
         BackColor = Color.FromArgb(14, 20, 31);
         ForeColor = Color.White;
         Font = new Font("Segoe UI", 10);
-        ClientSize = new Size(680, 438);
+        ClientSize = new Size(680, 514);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = MinimizeBox = false;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.CenterParent;
         AutoScaleMode = AutoScaleMode.Dpi;
-        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(24), ColumnCount = 1, RowCount = 9 };
-        foreach (int height in new[] { 40, 32, 44, 48, 48, 48, 48, 44, 26 }) root.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
+        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(24), ColumnCount = 1, RowCount = 11 };
+        foreach (int height in new[] { 40, 32, 44, 48, 48, 48, 48, 34, 42, 44, 26 }) root.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
         Controls.Add(root);
         root.Controls.Add(new Label { Text = "Settings", AutoSize = true, Font = new Font(Font.FontFamily, 19, FontStyle.Bold) }, 0, 0);
         root.Controls.Add(new Label { Text = "Language", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, ForeColor = Color.FromArgb(159, 176, 199) }, 0, 1);
@@ -148,9 +150,44 @@ public sealed class SettingsForm : Form
             }
         };
         root.Controls.Add(ExperimentalOption(venture), 0, 6);
+        int? savedFoveaSize = null;
+        try { savedFoveaSize = foveaPreferences?.Read(); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            AppLog.Current.Error("Could not read fovea size", error);
+        }
+        int initialFoveaSize = savedFoveaSize ?? FoveaSizePreferences.Default;
+        var fovea = new NumericUpDown
+        {
+            AccessibleName = "Fovea Size", DecimalPlaces = 2, Increment = 0.01m, Width = 86,
+            Minimum = FoveaSizePreferences.Minimum / 100m, Maximum = FoveaSizePreferences.Maximum / 100m,
+            Value = initialFoveaSize / 100m, Enabled = foveaPreferences != null
+        };
+        var foveaRow = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
+        foveaRow.Controls.Add(new Label { Text = "Fovea Size", AutoSize = true, Anchor = AnchorStyles.Left });
+        foveaRow.Controls.Add(fovea);
+        bool changedFoveaSize = false;
+        fovea.ValueChanged += (_, _) => changedFoveaSize = true;
+        root.Controls.Add(foveaRow, 0, 7);
+        root.Controls.Add(new Label
+        {
+            Text = "Changes the high-detail region in foveated streaming. Restart Streamer to apply.",
+            Dock = DockStyle.Fill, ForeColor = Color.FromArgb(159, 176, 199)
+        }, 0, 8);
         var close = new Button { Text = "Done", DialogResult = DialogResult.OK, Size = new Size(100, 34), Anchor = AnchorStyles.Right, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(108, 218, 188), ForeColor = BackColor };
-        root.Controls.Add(close, 0, 7);
-        root.Controls.Add(new Label { Text = "by ShadowManXR", Dock = DockStyle.Fill, TextAlign = ContentAlignment.BottomCenter, ForeColor = Color.FromArgb(159, 176, 199), Font = new Font(Font.FontFamily, 9), Margin = Padding.Empty }, 0, 8);
+        FormClosing += (_, e) =>
+        {
+            int value = (int)decimal.Round(fovea.Value * 100m);
+            if (DialogResult != DialogResult.OK || foveaPreferences == null || !changedFoveaSize || value == savedFoveaSize) return;
+            try { foveaPreferences.Save(value); }
+            catch (Exception error)
+            {
+                e.Cancel = true;
+                if (showErrors) LocalizedMessageBox.Show(this, error, "Could not save fovea size", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        };
+        root.Controls.Add(close, 0, 9);
+        root.Controls.Add(new Label { Text = "by ShadowManXR", Dock = DockStyle.Fill, TextAlign = ContentAlignment.BottomCenter, ForeColor = Color.FromArgb(159, 176, 199), Font = new Font(Font.FontFamily, 9), Margin = Padding.Empty }, 0, 10);
         AcceptButton = CancelButton = close;
         Localizer.Apply(this);
     }

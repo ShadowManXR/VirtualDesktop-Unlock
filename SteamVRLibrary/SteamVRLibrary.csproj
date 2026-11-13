@@ -9,9 +9,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ApplicationIcon>..\assets\icon.ico</ApplicationIcon>
-    <Version>0.2.7</Version>
-    <AssemblyVersion>0.2.7.0</AssemblyVersion>
-    <FileVersion>0.2.7.0</FileVersion>
+    <Version>0.3.0-alpha</Version>
+    <AssemblyVersion>0.3.0.0</AssemblyVersion>
+    <FileVersion>0.3.0.0</FileVersion>
     <Product>Virtual Desktop Unlock</Product>
     <Description>Steam VR companion library and optional RE3 library integration for Virtual Desktop.</Description>
   </PropertyGroup>
@@ -21,6 +21,8 @@
     <Compile Include="..\Shared\ButtonRemapProfile.cs" Link="ButtonRemapProfile.cs" />
     <Compile Include="..\Shared\LaunchPresetConfiguration.cs" Link="LaunchPresetConfiguration.cs" />
     <Compile Include="..\Shared\VenturePreferences.cs" Link="VenturePreferences.cs" />
+    <Compile Include="..\Shared\FoveaSizePreferences.cs" Link="FoveaSizePreferences.cs" />
+    <Compile Include="..\Shared\StreamerLocation.cs" Link="StreamerLocation.cs" />
     <EmbeddedResource Include="..\assets\icon.ico" LogicalName="Status.Ready.ico" />
     <EmbeddedResource Include="..\assets\icon-stopped.ico" LogicalName="Status.Stopped.ico" />
     <EmbeddedResource Include="..\assets\icon-unloaded.ico" LogicalName="Status.Unloaded.ico" />
