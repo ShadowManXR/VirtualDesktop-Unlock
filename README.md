@@ -19,6 +19,26 @@ An unofficial program for extending Virtual Desktop Streaming. Modifications are
 | Unlimited bitrate | Allows you to set your own bitrate limit for Wi-Fi or USB connections, though there is no guarantee that the stream will work correctly. This is an experimental feature. |
 | Remap Buttons | Key binding modifications for SteamVR and OpenXR games at the streamer level. |
 
+## Screenshots
+
+These desktop screenshots were captured in v0.2.8.
+
+**Game library**
+
+![Main window showing the Steam games and VD cache games lists](screenshots/0.2.8/Screenshot%202026-11-13%20172307.png)
+
+**Bitrate profiles**
+
+![Quest 3 Wi-Fi bitrate profile with limits for H.264, H.265, and AV1](screenshots/0.2.8/Screenshot%202026-11-13%20172342.png)
+
+**Launch preset**
+
+![Forefront launch preset with quality, FPS, FOV tangent, render resolution, and sharpening controls](screenshots/0.2.8/Screenshot%202026-11-13%20172428.png)
+
+**Scan details**
+
+![Forefront scan results showing advertised OpenVR and OpenXR support and the last observed VDXR runtime](screenshots/0.2.8/Screenshot%202026-11-13%20172514.png)
+
 ## Download and run
 
 Download the archive from [Release](https://github.com/ShadowManXR/VirtualDesktop-Unlock/releases)
