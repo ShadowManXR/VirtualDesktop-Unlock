@@ -9,9 +9,9 @@ using System.Xml;
 using System.Security.Cryptography;
 using VirtualDesktop.Unlock;
 
-[assembly: AssemblyVersion("0.2.4.0")]
+[assembly: AssemblyVersion("0.2.5.0")]
 [assembly: AssemblyTitle("Virtual Desktop Library Overrides")]
-[assembly: AssemblyFileVersion("0.2.4.0")]
+[assembly: AssemblyFileVersion("0.2.5.0")]
 
 namespace VirtualDesktop.LibraryOverrides
 {
@@ -101,6 +101,8 @@ namespace VirtualDesktop.LibraryOverrides
                             LaunchPresetRuntime.Install(assembly, Log);
                             if (updated && String.IsNullOrEmpty(testDirectory))
                             {
+                                try { ButtonRemapRuntime.Install(assembly, LaunchPresetRuntime.SupportsButtonRemaps, Log); }
+                                catch (Exception e) { Log("Button remapping unavailable: " + e); }
                                 try { VentureRuntime.Install(assembly, Log, new VenturePreferences(VenturePreferences.DefaultPath)); }
                                 catch (Exception e) { Log("Venture integration unavailable: " + e); }
                             }

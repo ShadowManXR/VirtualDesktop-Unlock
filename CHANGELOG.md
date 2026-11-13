@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.5 — 2026-11-13
+
+- Add per-game VDXR button swaps for face buttons, stick clicks, grips, and triggers.
+- Preserve analog pressure in grip and trigger swaps.
+
 ## 0.2.4 — 2026-11-11
 
 - Scan Venture's default games folder alongside its configured libraries, with one tile per game.

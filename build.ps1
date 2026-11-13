@@ -2,7 +2,7 @@
 param([string]$StreamerPath,[switch]$SkipTests)
 $ErrorActionPreference='Stop'
 $root=$PSScriptRoot
-$version='0.2.4'
+$version='0.2.5'
 $env:DOTNET_CLI_HOME=Join-Path $root '.dotnet-build'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'
 $env:DOTNET_GENERATE_ASPNET_CERTIFICATE='false'
@@ -40,7 +40,8 @@ $ventureSources=@('/reference:System.Web.Extensions.dll','/reference:System.Draw
     (Join-Path $root 'src\RuntimeOverrides\VentureWebp.cs'),
     (Join-Path $root 'src\RuntimeOverrides\VentureGameProcess.cs'),
     (Join-Path $root 'Shared\VenturePreferences.cs'))
-& $compiler /nologo /target:library ('/out:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) $references $ventureSources (Join-Path $root 'src\RuntimeOverrides\LibraryOverrides.cs') (Join-Path $root 'src\RuntimeOverrides\BitrateRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRecovery.cs') (Join-Path $root 'src\RuntimeOverrides\SteamGameLifetime.cs') (Join-Path $root 'Shared\LaunchPresetConfiguration.cs') (Join-Path $root 'Shared\BitrateConfiguration.cs')
+$remapSources=@((Join-Path $root 'src\RuntimeOverrides\ButtonRemapRuntime.cs'),(Join-Path $root 'Shared\ButtonRemapProfile.cs'))
+& $compiler /nologo /target:library ('/out:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) $references $ventureSources $remapSources (Join-Path $root 'src\RuntimeOverrides\LibraryOverrides.cs') (Join-Path $root 'src\RuntimeOverrides\BitrateRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRecovery.cs') (Join-Path $root 'src\RuntimeOverrides\SteamGameLifetime.cs') (Join-Path $root 'Shared\LaunchPresetConfiguration.cs') (Join-Path $root 'Shared\BitrateConfiguration.cs')
 if($LASTEXITCODE -ne 0){throw 'Runtime helper build failed.'}
 Copy-Item -LiteralPath (Join-Path $root 'src\RuntimeOverrides\RuntimeHook.config') -Destination (Join-Path $hook 'VirtualDesktop.Streamer.exe.config')
 [pscustomobject]@{Version=$version;StreamerVersion='1.34.25.0';StreamerSHA256='0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8';SupportedStreamers=@(@{Version='1.34.23.0';SHA256='FEAD548C57DF539006E6C97A7A29D46FDE172F756F40D65DBDB77ABAAFA3AEAD'},@{Version='1.34.25.0';SHA256='0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8'});HelperSHA256=(Get-FileHash -LiteralPath (Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')).Hash;ConfigSHA256=(Get-FileHash -LiteralPath (Join-Path $hook 'VirtualDesktop.Streamer.exe.config')).Hash} | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $hook 'manifest.json')
@@ -69,6 +70,10 @@ if(!$SkipTests){
         & (Join-Path $hook 'LaunchPresetHookTest.exe') ([IO.Path]::GetFullPath($StreamerPath)) (Join-Path $tests 'launch-hook')
         if($LASTEXITCODE -ne 0){throw 'Isolated launch-preset hook test failed.'}
         if([Diagnostics.FileVersionInfo]::GetVersionInfo($StreamerPath).FileVersion -eq '1.34.25.0'){
+            & $compiler /nologo /target:exe ('/out:'+(Join-Path $hook 'ButtonRemapHookTest.exe')) ('/reference:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) (Join-Path $root 'src\RuntimeOverrides\ButtonRemapHookTest.cs')
+            if($LASTEXITCODE -ne 0){throw 'Button remap hook harness did not compile.'}
+            & (Join-Path $hook 'ButtonRemapHookTest.exe') ([IO.Path]::GetFullPath($StreamerPath))
+            if($LASTEXITCODE -ne 0){throw 'Isolated button remap hook test failed.'}
             & $compiler /nologo /target:exe ('/out:'+(Join-Path $tests 'VentureIntegrationTest.exe')) (Join-Path $root 'src\RuntimeOverrides\VentureIntegrationTest.cs')
             if($LASTEXITCODE -ne 0){throw 'Venture integration test did not compile.'}
             & (Join-Path $tests 'VentureIntegrationTest.exe') ([IO.Path]::GetFullPath($StreamerPath)) (Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll') (Join-Path $tests 'venture-integration') (Join-Path $work 'libwebp-1.6.0-windows-x64\test.webp')

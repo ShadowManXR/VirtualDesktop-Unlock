@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using VirtualDesktop.Unlock;
 
 namespace SteamVRLibrary;
 
@@ -122,6 +123,7 @@ public sealed class LibraryForm : Form
     private readonly Button remove = MakeButton("←  Remove");
     private readonly Button refresh = MakeButton("Refresh");
     private readonly Button details = MakeButton("Scan details");
+    private readonly Button remapButtons = MakeButton("Remap Buttons");
     private readonly ToolTip tip = new() { AutoPopDelay = 10000 };
     private ColumnStyle transferColumn = null!;
     private ScanResult scan = new([], [], []);
@@ -244,7 +246,21 @@ public sealed class LibraryForm : Form
         var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(0, 12, 0, 0), WrapContents = false, Margin = Padding.Empty };
         details.Width = 110;
         launchPresets.Width = 160;
-        actions.Controls.AddRange([launchPresets, details]);
+        actions.Controls.AddRange([launchPresets, details, remapButtons]);
+        remapButtons.Click += (_, _) =>
+        {
+            if (!ready || busy || vr.SelectedItems.Count != 1) return;
+            try
+            {
+                using var dialog = new ButtonRemapForm((Game)vr.SelectedItems[0].Tag!, ButtonRemapProfile.DefaultDirectory) { Icon = Icon };
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                    Localizer.SetText(status, "Button remaps saved for the next launch.");
+            }
+            catch (Exception error)
+            {
+                LocalizedMessageBox.Show(this, error, "Could not open button remaps", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        };
         launchPresets.Click += (_, _) =>
         {
             if (!ready || busy || vr.SelectedItems.Count != 1) return;
@@ -433,7 +449,7 @@ public sealed class LibraryForm : Form
         UpdateRestartNotice();
         restart.Enabled = ready && !busy;
         bitrate.Enabled = bitrateProfiles.Enabled = !busy;
-        launchPresets.Enabled = ready && !busy && vr.SelectedItems.Count == 1;
+        launchPresets.Enabled = remapButtons.Enabled = ready && !busy && vr.SelectedItems.Count == 1;
         add.Enabled = ready && !busy && steam.SelectedItems.Count > 0;
         remove.Enabled = ready && !busy && vr.SelectedItems.Count > 0;
         refresh.Enabled = !busy;
@@ -584,6 +600,7 @@ public sealed class LibraryForm : Form
         int WidthFor(Button b) => TextRenderer.MeasureText(b.Text,b.Font).Width+24;
         transferColumn.Width = Math.Max(154,Math.Max(WidthFor(add),WidthFor(remove))+24);
         details.Width=Math.Max(110,WidthFor(details));
+        remapButtons.Width=Math.Max(140,WidthFor(remapButtons));
         launchPresets.Width=Math.Max(160,WidthFor(launchPresets));
         int statusWidth=Math.Max(105,Math.Max(TextRenderer.MeasureText(Localizer.T("Installed"),steam.Font).Width,TextRenderer.MeasureText(Localizer.T("Not installed"),steam.Font).Width)+18);
         foreach(var list in new[]{steam,vr}) { list.Columns[1].Width=statusWidth;list.Columns[0].Width=Math.Max(180,list.ClientSize.Width-statusWidth); }

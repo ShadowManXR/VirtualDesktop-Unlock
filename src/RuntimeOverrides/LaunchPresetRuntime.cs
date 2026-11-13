@@ -118,6 +118,31 @@ namespace VirtualDesktop.LibraryOverrides
         public static Task Launch(object game)
         {
             int platform=Convert.ToInt32(platformField.GetValue(game));ulong id=Convert.ToUInt64(idField.GetValue(game));
+            var remap = ButtonRemapRuntime.BeginLaunch(platform, id);
+            try
+            {
+                var launch = LaunchGame(game, platform, id);
+                return remap == null ? launch : ButtonRemapRuntime.ObserveLaunch(remap, launch);
+            }
+            catch
+            {
+                if (remap != null) ButtonRemapRuntime.Cancel(remap);
+                throw;
+            }
+        }
+
+        internal static bool SupportsButtonRemaps()
+        {
+            try
+            {
+                User();
+                return Convert.ToInt32(Property(StreamerSettings(), "OpenXRRuntime")) == 2; // Explicit VDXR
+            }
+            catch (InvalidOperationException) { return false; }
+        }
+
+        private static Task LaunchGame(object game, int platform, ulong id)
+        {
             if(platform==0 && VentureRuntime.TryLaunch(game,id))return Task.FromResult(0);
             if(platform!=1)return original(game);
             LaunchPreset preset;

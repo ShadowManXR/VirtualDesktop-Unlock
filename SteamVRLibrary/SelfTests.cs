@@ -1,4 +1,5 @@
 using System.Text.Json;
+using VirtualDesktop.Unlock;
 
 namespace SteamVRLibrary;
 
@@ -15,6 +16,67 @@ internal static class SelfTests
         { if (!condition) throw new Exception(name); checks.Add("PASS " + name); }
         try
         {
+            var remapDirectory = Path.Combine(root, "ButtonRemaps");
+            var remapGame = new Game("952060", "Resident Evil 3", "example");
+            var otherRemap = new ButtonRemapProfile([new ButtonSwap(RemapButton.X, RemapButton.Y)]);
+            otherRemap.Save(remapDirectory, 2981220);
+            void EditRemaps(Action<Button[], ComboBox[]> edit)
+            {
+                using var dialog = new ButtonRemapForm(remapGame, remapDirectory);
+                dialog.StartPosition = FormStartPosition.Manual;
+                dialog.Location = new Point(-20000, -20000);
+                dialog.Show();
+                IEnumerable<Control> ControlsIn(Control parent) =>
+                    parent.Controls.Cast<Control>().SelectMany(child => new[] { child }.Concat(ControlsIn(child)));
+                var initial = ControlsIn(dialog).ToArray();
+                if (initial.OfType<ComboBox>().Count() == 0)
+                    initial.OfType<Button>().Single(button => button.Text == "+").PerformClick();
+                var controls = ControlsIn(dialog).ToArray();
+                edit(controls.OfType<Button>().ToArray(), controls.OfType<ComboBox>().ToArray());
+                controls.OfType<Button>().Single(button => button.Text == Localizer.T("Save preset")).PerformClick();
+                Check(dialog.DialogResult == DialogResult.OK, "Button remap dialog saves edits");
+            }
+            EditRemaps((_, boxes) =>
+            {
+                Check(boxes.Length == 2, "Adding a button remap creates two dropdowns");
+                Check(boxes.All(box => box.Items.Count == 10 && box.Items.Contains(RemapButton.LGrip) &&
+                    box.Items.Contains(RemapButton.RTrigger) && box.Items.Contains(RemapButton.LThumb)),
+                    "Remap dropdowns offer face buttons, stick clicks, grips and triggers");
+                boxes[0].SelectedItem = RemapButton.A;
+                boxes[1].SelectedItem = RemapButton.B;
+            });
+            short firstFlags = 0x11, secondFlags = 0x14, touches = 0;
+            byte leftTrigger = 0, rightTrigger = 0, leftGrip = 0, rightGrip = 0;
+            ButtonRemapProfile.Read(remapDirectory, 952060).Apply(ref firstFlags, ref touches,
+                ref leftTrigger, ref rightTrigger, ref leftGrip, ref rightGrip);
+            ButtonRemapProfile.Read(remapDirectory, 2981220).Apply(ref secondFlags, ref touches,
+                ref leftTrigger, ref rightTrigger, ref leftGrip, ref rightGrip);
+            Check(firstFlags == 0x12 && secondFlags == 0x18,
+                "Button remaps are isolated per Steam app and preserve unrelated inputs");
+            EditRemaps((buttons, boxes) =>
+            {
+                Check(boxes[0].SelectedItem is RemapButton.A && boxes[1].SelectedItem is RemapButton.B,
+                    "Reopening the button remap dialog restores the saved pair");
+                buttons.Single(button => button.Text == "−").PerformClick();
+            });
+            Check(ButtonRemapProfile.Read(remapDirectory, 952060).Swaps.Count == 0 &&
+                ButtonRemapProfile.Read(remapDirectory, 2981220).Swaps.Count == 1,
+                "Removing a button remap clears only the selected game's configuration");
+            var allControls = Enum.GetValues<RemapButton>();
+            var fiveSwaps = new ButtonRemapProfile(allControls.Chunk(2).Select(pair => new ButtonSwap(pair[0], pair[1])));
+            fiveSwaps.Save(remapDirectory, 952060);
+            EditRemaps((buttons, boxes) =>
+            {
+                Check(boxes.Length == 10 && !buttons.Single(button => button.Text == "+").Enabled,
+                    "All five swaps fit in the editor and survive a save and reopen");
+            });
+            try
+            {
+                _ = new ButtonRemapProfile([new ButtonSwap(RemapButton.A, RemapButton.B), new ButtonSwap(RemapButton.A, RemapButton.X)]);
+                throw new Exception("Overlapping button swaps were accepted");
+            }
+            catch (InvalidDataException) { Check(true, "Overlapping button swaps are rejected"); }
+
             AppLog.Current.Error("Test operation", new IOException("Test failure"));
             var log = File.ReadAllText(logPath);
             Check(log.Contains("ERROR Test operation") && log.Contains("System.IO.IOException: Test failure"),
