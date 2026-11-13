@@ -21,12 +21,13 @@ internal static class SteamMetadataTests
                 if (version == 0x07564429) w.Write((uint)Array.IndexOf(names, name));
                 else { w.Write(Encoding.UTF8.GetBytes(name)); w.Write((byte)0); }
             }
-            void Entry(uint id, string flag, bool enabled, bool nestedDecoy = false)
+            void Entry(uint id, string flag, bool enabled, bool nestedDecoy = false, string? secondFlag = null)
             {
                 using var data = new MemoryStream();
                 using var kv = new BinaryWriter(data, Encoding.UTF8, true);
                 Key(kv, 0, "appinfo"); Key(kv, 0, "common");
                 Key(kv, 1, flag); kv.Write(Encoding.UTF8.GetBytes(enabled ? "1" : "0")); kv.Write((byte)0);
+                if (secondFlag != null) { Key(kv, 2, secondFlag); kv.Write(1); }
                 kv.Write((byte)8);
                 if (nestedDecoy)
                 {
@@ -37,7 +38,7 @@ internal static class SteamMetadataTests
                 writer.Write(id); writer.Write((uint)(headerSize + data.Length));
                 writer.Write(new byte[headerSize]); writer.Write(data.ToArray());
             }
-            Entry(111, "openvrsupport", true);
+            Entry(111, "openvrsupport", true, secondFlag: "openxrsupport");
             Entry(952060, "openxrsupport", false, true);
             Entry(999, "openxrsupport", true);
             Entry(222, "othervrsupport", true);
@@ -53,6 +54,10 @@ internal static class SteamMetadataTests
             File.WriteAllBytes(path, file.ToArray());
             check(SteamMetadata.ReadVrIds(path, ["111", "952060", "999", "222"]).SetEquals(["111", "999", "222"]),
                 $"Steam metadata {version:X} recognizes original common VR flags, excludes overrides, nested decoys and uncached games");
+            var apis = new HashSet<string>();
+            SteamMetadata.ReadVrIds(path, ["111", "952060"], apiFound: (id, flag) => apis.Add($"{id}/{flag}"));
+            check(apis.SetEquals(["111/openvrsupport", "111/openxrsupport"]),
+                $"Steam metadata {version:X} reports both advertised APIs independently");
         }
         var valid = File.ReadAllBytes(path);
         File.WriteAllBytes(path, valid[..20]);

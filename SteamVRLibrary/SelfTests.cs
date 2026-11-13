@@ -107,6 +107,7 @@ internal static class SelfTests
             var cacheText = "{\"SteamProductInfos\":{\"111\":{\"OpenVRSupport\":true},\"952060\":{\"OpenXRSupport\":false},\"999\":{\"OpenXRSupport\":true}}}";
             File.WriteAllText(cache, cacheText);
             SteamMetadataTests.Run(steam, Check);
+            GameApiScanTests.Run(Check);
             var scan = SteamScanner.Scan(steam, cache);
             Check(scan.Warnings.Count == 0 && scan.Games.Count == 2, "Scans multiple Steam libraries; excludes tools, missing installs and escaped paths");
             Check(scan.Games.Single(g => g.Id == "952060").InstallDirectory.Contains("Second library ü"), "Handles spaces, Unicode and VDF backslash escapes");
@@ -186,12 +187,17 @@ internal static class SelfTests
                 var restart = controls.OfType<LinkLabel>().Single(x => x.AccessibleName == "Restart Streamer");
                 Check(left.Items.Count == 1 && right.Items.Count == 1, "UI seeds only installed cached VR games");
                 var presetButton=controls.OfType<Button>().Single(x=>x.Text=="Launch Preset");
+                var detailsButton=controls.OfType<Button>().Single(x=>x.Text=="Scan details");
+                Check(!detailsButton.Enabled,"Scan details starts disabled without a game selection");
                 Check(!presetButton.Enabled,"Launch Preset starts disabled without a right-list selection");
                 left.Items[0].Selected=true;
+                Check(detailsButton.Enabled,"Scan details accepts a selected Steam game");
                 Check(!presetButton.Enabled,"Steam-list selection does not enable Launch Preset");
                 right.Items[0].Selected=true;
+                Check(detailsButton.Enabled,"Scan details accepts a selected VD cache game");
                 Check(presetButton.Enabled,"Exactly one selected VD cache game enables Launch Preset");
                 right.Items[0].Selected=false;
+                Check(!detailsButton.Enabled,"Clearing the game selection disables Scan details");
                 Check(!presetButton.Enabled,"Clearing the VD cache selection disables Launch Preset");
                 Check(right.Items[0].ForeColor == Color.FromArgb(105,177,255) && left.Items[0].ForeColor == left.ForeColor,
                     "Only VD cache rows backed by original Steam VR metadata appear blue");

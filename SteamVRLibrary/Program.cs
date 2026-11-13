@@ -301,10 +301,7 @@ public sealed class LibraryForm : Form
         refresh.Click += async (_, _) => await ReloadAsync();
         steam.DoubleClick += (_, _) => MoveGames(true);
         vr.DoubleClick += (_, _) => MoveGames(false);
-        details.Click += (_, _) => LocalizedMessageBox.Show(this,
-            (scan.Warnings.Count == 0 ? Localizer.T("All available Steam folders were scanned successfully.") : string.Join("\n\n", scan.Warnings))
-            + "\n\n" + Localizer.T("Selections") + ": " + store.Path + "\n\n" + Localizer.T("Shared overrides") + ": " + sharedOverrides.Path + "\n\n" + Localizer.T("Restart Streamer after changing selections. Native VR games may still appear without custom additions."),
-            "Library details", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        details.Click += async (_, _) => await ScanGameApiAsync();
         if (!preview) Shown += async (_, _) => await ReloadAsync();
         Localizer.Apply(this); Localizer.ApplyMenu(trayMenu);
         AdjustLocalizedLayout();
@@ -450,10 +447,72 @@ public sealed class LibraryForm : Form
         restart.Enabled = ready && !busy;
         bitrate.Enabled = bitrateProfiles.Enabled = !busy;
         launchPresets.Enabled = remapButtons.Enabled = ready && !busy && vr.SelectedItems.Count == 1;
+        details.Enabled = ready && !busy && SelectedGameForDetails() != null;
         add.Enabled = ready && !busy && steam.SelectedItems.Count > 0;
         remove.Enabled = ready && !busy && vr.SelectedItems.Count > 0;
         refresh.Enabled = !busy;
         search.Enabled = ready && !busy;
+    }
+
+    private Game? SelectedGameForDetails()
+    {
+        if (steam.SelectedItems.Count + vr.SelectedItems.Count != 1) return null;
+        return (steam.SelectedItems.Count == 1 ? steam.SelectedItems[0] : vr.SelectedItems[0]).Tag as Game;
+    }
+
+    private async Task ScanGameApiAsync()
+    {
+        if (!ready || busy || SelectedGameForDetails() is not { } game) return;
+        busy = true;
+        UpdateButtons();
+        try
+        {
+            var library = scan.Games;
+            var vdxrLog = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "Virtual Desktop", "OpenXR.log");
+            var result = await Task.Run(() => GameApiScan.Scan(game, library, SteamScanner.InstallationPath, vdxrLog));
+            if (!IsDisposed) ShowScanDetails(result.Describe(game));
+        }
+        catch (Exception error)
+        {
+            const string message = "Could not scan the game’s VR API";
+            AppLog.Current.Error(message, error);
+            if (!IsDisposed) ShowScanDetails(Localizer.T(message) + Environment.NewLine + Localizer.T(error.Message));
+        }
+        finally
+        {
+            busy = false;
+            if (!IsDisposed) UpdateButtons();
+        }
+    }
+
+    private void ShowScanDetails(string text)
+    {
+        using var dialog = new Form
+        {
+            Text = Localizer.T("Scan details"), Icon = Icon, ShowInTaskbar = false,
+            StartPosition = FormStartPosition.CenterParent, FormBorderStyle = FormBorderStyle.FixedDialog,
+            MinimizeBox = false, MaximizeBox = false, AutoScaleMode = AutoScaleMode.Dpi,
+            ClientSize = new Size(520, 275), BackColor = Background, ForeColor = Color.White,
+            RightToLeft = RightToLeft, RightToLeftLayout = RightToLeftLayout, Font = Font
+        };
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Padding = new Padding(16) };
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var content = new TextBox
+        {
+            Text = text, Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical,
+            BackColor = Card, ForeColor = Color.White, AccessibleName = dialog.Text
+        };
+        var close = MakeButton(Localizer.T("Close"));
+        close.Anchor = AnchorStyles.Right;
+        close.DialogResult = DialogResult.Cancel;
+        layout.Controls.Add(content, 0, 0);
+        layout.Controls.Add(close, 0, 1);
+        dialog.Controls.Add(layout);
+        dialog.AcceptButton = dialog.CancelButton = close;
+        dialog.ActiveControl = close;
+        dialog.ShowDialog(this);
     }
 
     private void MoveGames(bool toVr)

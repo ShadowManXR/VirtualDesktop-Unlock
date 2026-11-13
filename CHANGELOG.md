@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.6 — 2026-11-13
+
+- Show the selected game's advertised and last observed VR APIs in Scan details, with API and runtime versions when available.
+
 ## 0.2.5 — 2026-11-13
 
 - Add per-game VDXR button swaps for face buttons, stick clicks, grips, and triggers.
