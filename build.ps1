@@ -116,7 +116,7 @@ if(!$SkipTests){
             try{
                 $env:VD_BITRATE_TEST='1'; $env:VD_BITRATE_CONFIG=Join-Path $tests 'BitrateOverrides.xml'; $env:VD_BITRATE_STATUS=Join-Path $tests 'BitrateStatus.xml'
                 $env:VD_LIBRARY_OVERRIDES_FILE=Join-Path $tests 're3.xml'; $env:VD_LIBRARY_OVERRIDE_LOG=Join-Path $tests 'bitrate-hook.log'
-                if([Diagnostics.FileVersionInfo]::GetVersionInfo($StreamerPath).FileVersion -eq '1.34.23.0'){
+                if([Diagnostics.FileVersionInfo]::GetVersionInfo($StreamerPath).FileVersion -eq '1.34.23.0' -or [Diagnostics.FileVersionInfo]::GetVersionInfo($StreamerPath).FileVersion -eq '1.34.25.0'){
                     & (Join-Path $tests 'BitrateHookTest.exe') ([IO.Path]::GetFullPath($StreamerPath))
                     if($LASTEXITCODE -ne 0){throw 'Bitrate server tests failed.'}
                 }else{

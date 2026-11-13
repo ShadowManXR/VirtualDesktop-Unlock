@@ -24,28 +24,6 @@ internal static class Program
         };
         AppLog.Current.Info("Starting VD Unlock " + Application.ProductVersion);
         Localizer.Initialize();
-        if (args.Length == 2 && args[0] == "--render-launch-presets")
-        {
-            var games = SteamScanner.Scan().Games;
-            using var form = new LaunchPresetsForm(games.FirstOrDefault(g => g.Id == "2981220") ?? games.First(), new LaunchPresetStore(VirtualDesktop.Unlock.LaunchPresetConfiguration.DefaultPath));
-            form.ShowInTaskbar = false; form.StartPosition = FormStartPosition.Manual; form.Location = new Point(-20000,-20000); form.Show(); Application.DoEvents();
-            using var bitmap = new Bitmap(form.Width,form.Height); form.DrawToBitmap(bitmap,new Rectangle(Point.Empty,form.Size)); bitmap.Save(args[1]);return 0;
-        }
-        if (args.Length == 2 && args[0] == "--render-preview")
-        {
-            using var form = new LibraryForm(preview: true);
-            form.LoadPreview();
-            form.ShowInTaskbar = false;
-            form.StartPosition = FormStartPosition.Manual;
-            form.Location = new Point(-20000, -20000);
-            form.Show();
-            Application.DoEvents();
-            // DrawToBitmap renders the app's own controls without operating any other window.
-            using var bitmap = new Bitmap(form.Width, form.Height);
-            form.DrawToBitmap(bitmap, new Rectangle(Point.Empty, form.Size));
-            bitmap.Save(args[1]);
-            return 0;
-        }
         using var mutex = new Mutex(true, SingleInstance.MutexName, out var first);
         if (!first)
         {
@@ -115,7 +93,7 @@ public sealed class LibraryForm : Form
     private readonly Label vrCount = TextLabel("Saved on this PC", Muted, 9);
     private readonly Label status = TextLabel("Loading…", Muted, 9);
     private readonly Label connectionStatus = TextLabel("", Accent, 10);
-    private readonly LinkLabel restart = new() { Text = "Restart Streamer and reconnect to apply custom additions", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, LinkColor = Accent, ActiveLinkColor = Color.White, VisitedLinkColor = Accent, Visible = false, AccessibleName = "Restart Streamer" };
+    private readonly LinkLabel restart = new() { Text = "Restart Streamer and reconnect to apply custom additions", Dock = DockStyle.Top, AutoSize = true, TextAlign = ContentAlignment.MiddleLeft, LinkColor = Accent, ActiveLinkColor = Color.White, VisitedLinkColor = Accent, Visible = false, AccessibleName = "Restart Streamer" };
     private readonly IStreamerControl streamerControl;
     private readonly System.Windows.Forms.Timer restartTimer = new() { Interval = 3000 };
     private uint[]? syncedIds;
@@ -166,36 +144,47 @@ public sealed class LibraryForm : Form
         MinimumSize = new Size(990, 664);
         StartPosition = FormStartPosition.CenterScreen;
         AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleDimensions = new SizeF(96F, 96F);
 
-        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(28, 22, 28, 18), ColumnCount = 1, RowCount = 9, BackColor = Background };
-        foreach (var height in new[] { 50, 30, 54, 48 }) root.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
+        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(28, 22, 28, 18), ColumnCount = 1, RowCount = 9, BackColor = Background, AutoSize = false };
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 26));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         Controls.Add(root);
 
-        var titleRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4 };
-        titleRow.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        var titleRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink };
+        titleRow.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         titleRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         titleRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         titleRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         titleRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         var title = TextLabel("Virtual Desktop Unlock", Color.White, 24, FontStyle.Bold);
-        title.AutoSize = true;
-        title.Dock = DockStyle.None;
+        title.AutoSize = false;
+        title.AutoEllipsis = true;
+        title.Dock = DockStyle.Fill;
         title.Margin = new Padding(0, 0, 10, 0);
-        var heading = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Margin = Padding.Empty };
-        heading.Controls.Add(title);
+        title.MinimumSize = new Size(200, 44);
+        var heading = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink };
+        heading.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        heading.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        heading.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        heading.Controls.Add(title, 0, 0);
         var settings = MakeButton("⚙");
-        settings.Size = new Size(40, 40);
+        settings.AutoSize = true;
+        settings.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        settings.MinimumSize = new Size(40, 40);
         settings.Margin = new Padding(0, 0, 0, 0);
         settings.Font = new Font("Segoe UI Symbol", 21);
         settings.AccessibleName = "Settings";
         Localizer.SetToolTip(tip, settings, "Settings");
         settings.Click += (_, _) => OpenSettings();
-        heading.Controls.Add(settings);
+        heading.Controls.Add(settings, 1, 0);
         titleRow.Controls.Add(heading, 0, 0);
         bitrate.Dock = bitrateProfiles.Dock = refresh.Dock = DockStyle.Fill;
         foreach(var button in new[]{bitrate,bitrateProfiles,refresh}) { button.AutoSize = true; button.AutoSizeMode = AutoSizeMode.GrowAndShrink; button.Padding = new Padding(8,0,8,0); }
@@ -218,7 +207,7 @@ public sealed class LibraryForm : Form
         search.Margin = new Padding(0, 4, 0, 10);
         search.AccessibleName = "Search games";
         var searchRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Margin = Padding.Empty };
-        searchRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 62));
+        searchRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         searchRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         searchRow.Controls.Add(TextLabel("Search", Muted, 10), 0, 0);
         searchRow.Controls.Add(search, 1, 0);
@@ -309,7 +298,7 @@ public sealed class LibraryForm : Form
     }
 
     private static Label TextLabel(string text, Color color, float size, FontStyle style = FontStyle.Regular) => new()
-    { Text = text, ForeColor = color, Font = new Font("Segoe UI", size, style), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty };
+    { Text = text, ForeColor = color, Font = new Font("Segoe UI", size, style), Dock = DockStyle.Top, AutoSize = true, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty };
 
     private static Button MakeButton(string text, bool primary = false)
     {
@@ -330,13 +319,16 @@ public sealed class LibraryForm : Form
 
     private static Control MakeCard(string heading, string subtitle, Label count, ListView list)
     {
-        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, BackColor = Card, Padding = new Padding(16, 12, 16, 10), ColumnCount = 1, RowCount = 4, Margin = Padding.Empty };
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 26));
+        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, BackColor = Card, Padding = new Padding(16, 12, 16, 10), ColumnCount = 1, RowCount = 4, Margin = Padding.Empty, AutoSize = false };
+        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
-        panel.Controls.Add(TextLabel(heading, Color.White, 16, FontStyle.Bold), 0, 0);
-        panel.Controls.Add(TextLabel(subtitle, Muted, 9), 0, 1);
+        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var headingLabel = TextLabel(heading, Color.White, 16, FontStyle.Bold);
+        var subtitleLabel = TextLabel(subtitle, Muted, 9);
+        foreach (var label in new[]{headingLabel, subtitleLabel, count}) { label.Dock = DockStyle.Top; label.AutoSize = true; }
+        panel.Controls.Add(headingLabel, 0, 0);
+        panel.Controls.Add(subtitleLabel, 0, 1);
         panel.Controls.Add(list, 0, 2);
         panel.Controls.Add(count, 0, 3);
         return panel;
@@ -664,12 +656,41 @@ public sealed class LibraryForm : Form
         int statusWidth=Math.Max(105,Math.Max(TextRenderer.MeasureText(Localizer.T("Installed"),steam.Font).Width,TextRenderer.MeasureText(Localizer.T("Not installed"),steam.Font).Width)+18);
         foreach(var list in new[]{steam,vr}) { list.Columns[1].Width=statusWidth;list.Columns[0].Width=Math.Max(180,list.ClientSize.Width-statusWidth); }
         MinimumSize=new Size(Math.Max(990,bitrate.PreferredSize.Width+bitrateProfiles.PreferredSize.Width+refresh.PreferredSize.Width+540),664);
+        int BtnH(Button b) => Math.Max(34, TextRenderer.MeasureText("Ag", b.Font).Height + 18);
+        details.Height = launchPresets.Height = Math.Max(BtnH(details), BtnH(launchPresets));
+        int actionH = Math.Max(details.Height, launchPresets.Height);
+        if (actionH > 0 && status.Parent is TableLayoutPanel rt && rt.RowStyles.Count > 5) { rt.RowStyles[5].SizeType = SizeType.Absolute; rt.RowStyles[5].Height = actionH + 12 + 8; }
     }
 
     internal void ExitApplication()
     {
         exiting = true;
         Close();
+    }
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        AdjustLocalizedLayout();
+        FitToScreen();
+    }
+
+    protected override void OnDpiChanged(DpiChangedEventArgs e)
+    {
+        base.OnDpiChanged(e);
+        AdjustLocalizedLayout();
+        FitToScreen();
+    }
+
+    // At 150%+ the scaled window (1160x754 logical) is taller/wider than many
+    // screens and MinimumSize blocks shrinking it: clamp both to the working area.
+    private void FitToScreen()
+    {
+        if (!IsHandleCreated) return;
+        var area = Screen.FromHandle(Handle).WorkingArea;
+        MinimumSize = new Size(Math.Min(MinimumSize.Width, area.Width), Math.Min(MinimumSize.Height, area.Height));
+        if (Width > area.Width || Height > area.Height)
+            Size = new Size(Math.Min(Width, area.Width), Math.Min(Height, area.Height));
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)

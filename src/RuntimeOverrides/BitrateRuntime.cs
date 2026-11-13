@@ -30,6 +30,7 @@ namespace VirtualDesktop.LibraryOverrides
         private static DateTime nextDiagnostics;
         private static Func<object,IntPtr> nativeConfiguration;
         private static Type nativeWrapperType;
+        private static bool updatedStreamer;
         private static int nativeAverageOffset;
         private static int nativeMaximumOffset;
         private static string ConfigurationPath { get { return Environment.GetEnvironmentVariable("VD_BITRATE_CONFIG") ?? BitrateConfiguration.DefaultPath; } }
@@ -38,17 +39,19 @@ namespace VirtualDesktop.LibraryOverrides
         public static void Install(Assembly assembly, Action<string> logger)
         {
             if (installed) return;
-            if (assembly.GetName().Version != new Version(1,34,23,0))
+            Version version=assembly.GetName().Version;
+            updatedStreamer=version==new Version(1,34,25,0);
+            if (!updatedStreamer && version!=new Version(1,34,23,0))
             {
                 log=logger;
                 try { current=BitrateConfiguration.Read(ConfigurationPath);revision=BitrateConfiguration.Revision(ConfigurationPath); }
                 catch { current=new BitrateConfiguration();revision=null; }
-                string reason="Bitrate overrides are unavailable on Streamer "+assembly.GetName().Version+"; game-library additions are supported. Stock bitrate behavior retained.";
+                string reason="Bitrate overrides are unavailable on Streamer "+version+"; game-library additions are supported. Stock bitrate behavior retained.";
                 WriteStatus(false,reason,true);logger(reason);return;
             }
-            if (IntPtr.Size != 8) throw new NotSupportedException("Bitrate overrides require x64 Streamer 1.34.23.0.");
+            if (IntPtr.Size != 8) throw new NotSupportedException("Bitrate overrides require x64 Streamer 1.34.23.0 or 1.34.25.0.");
             using (var sha = SHA256.Create())
-                if (BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(assembly.Location))).Replace("-", "") != "FEAD548C57DF539006E6C97A7A29D46FDE172F756F40D65DBDB77ABAAFA3AEAD")
+                if (BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(assembly.Location))).Replace("-", "") != (updatedStreamer?"0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8":"FEAD548C57DF539006E6C97A7A29D46FDE172F756F40D65DBDB77ABAAFA3AEAD"))
                     throw new NotSupportedException("Bitrate override executable hash does not match the verified Streamer.");
             streamer = assembly; log = logger;
             InitializeNativeDiagnostics();
@@ -59,7 +62,7 @@ namespace VirtualDesktop.LibraryOverrides
                 sharedSettingsField=baseType.GetField("<Default>k__BackingField",BindingFlags.Static|BindingFlags.NonPublic|BindingFlags.DeclaredOnly);
                 if(sharedSettingsField!=null)break;
             }
-            var method = assembly.ManifestModule.ResolveMethod(0x060212B6) as MethodInfo;
+            var method = assembly.ManifestModule.ResolveMethod(updatedStreamer?0x060212CD:0x060212B6) as MethodInfo;
             var parameters = method.GetParameters();
             if (!method.IsStatic || method.ReturnType != typeof(int) || parameters.Length != 3 || parameters[0].ParameterType.FullName != "Xenko.VR.HmdType" || parameters[1].ParameterType.FullName != "VirtualDesktop.Net.VideoCodec" || parameters[2].ParameterType != typeof(bool))
                 throw new MissingMethodException("Unexpected bitrate calculation signature.");
@@ -149,7 +152,7 @@ namespace VirtualDesktop.LibraryOverrides
             // OculusStreamer does not subscribe to VRBitrateLimitChanged. Its existing
             // forwarding routine must also refresh any already-created encoder wrappers.
             var encoderOwner=FindEncoderOwner(mobile);
-            if(encoderOwner!=null)streamer.ManifestModule.ResolveMethod(0x0600041D).Invoke(encoderOwner,null);
+            if(encoderOwner!=null)streamer.ManifestModule.ResolveMethod(updatedStreamer?0x06000424:0x0600041D).Invoke(encoderOwner,null);
         }
         private static object FindEncoderOwner(object mobile)
         {
@@ -164,26 +167,39 @@ namespace VirtualDesktop.LibraryOverrides
             var owner=FindEncoderOwner(mobile);
             if(owner==null)return "none";
             var values=new List<string>();
-            foreach(int token in new[]{0x0400028F,0x04000291})
+            int[] slots=updatedStreamer?new[]{0x04000293,0x04000294,0x04000295,0x04000296}:new[]{0x0400028F,0x04000291};
+            int[] rates=updatedStreamer?new[]{0x04014DB6,0x04014DB7,0x04014DB8,0x04014DB9}:new[]{0x04014DAB,0x04014DAC,0x04014DAD};
+            foreach(int token in slots)
             {
                 var wrapper=streamer.ManifestModule.ResolveField(token).GetValue(owner);
                 if(wrapper==null){values.Add("none");continue;}
-                values.Add(streamer.ManifestModule.ResolveField(0x04014DAB).GetValue(wrapper)+","+
-                    streamer.ManifestModule.ResolveField(0x04014DAC).GetValue(wrapper)+","+
-                    streamer.ManifestModule.ResolveField(0x04014DAD).GetValue(wrapper)+" (NVENC "+ReadNativeRateControl(wrapper)+")");
+                var parts=new List<string>();
+                foreach(int rate in rates)parts.Add(streamer.ManifestModule.ResolveField(rate).GetValue(wrapper).ToString());
+                values.Add(String.Join(",",parts.ToArray())+" (NVENC "+ReadNativeRateControl(wrapper)+")");
             }
             return String.Join("|",values.ToArray());
         }
         private static void InitializeNativeDiagnostics()
         {
-            var pointer=streamer.ManifestModule.ResolveField(0x04014F7B);
-            nativeWrapperType=pointer.DeclaringType;
-            var getter=new DynamicMethod("ReadNvencConfigurationPointer",typeof(IntPtr),new[]{typeof(object)},typeof(BitrateRuntime),true);
-            var il=getter.GetILGenerator();il.Emit(OpCodes.Ldarg_0);il.Emit(OpCodes.Castclass,nativeWrapperType);il.Emit(OpCodes.Ldfld,pointer);il.Emit(OpCodes.Conv_I);il.Emit(OpCodes.Ret);
-            nativeConfiguration=(Func<object,IntPtr>)getter.CreateDelegate(typeof(Func<object,IntPtr>));
-            var rate=streamer.ManifestModule.ResolveField(0x04014FA7);
-            nativeAverageOffset=FieldOffset(rate)+FieldOffset(streamer.ManifestModule.ResolveField(0x04015127));
-            nativeMaximumOffset=FieldOffset(rate)+FieldOffset(streamer.ManifestModule.ResolveField(0x04015128));
+            // The 1.34.25 encoder chain moved the native configuration pointer behind
+            // additional obfuscated hops; tracing it is not worth the fragility for a
+            // debug string, so managed wrapper targets are the verified evidence there.
+            nativeAverageOffset=-1;nativeMaximumOffset=-1;
+            if(updatedStreamer){nativeWrapperType=null;nativeConfiguration=null;log("Native NVENC introspection is unavailable on this Streamer build; managed encoder targets are verified instead.");return;}
+            Type wrapperType=null;Func<object,IntPtr> configuration=null;int average=-1,maximum=-1;
+            try
+            {
+                var pointer=streamer.ManifestModule.ResolveField(0x04014F7B);
+                wrapperType=pointer.DeclaringType;
+                var getter=new DynamicMethod("ReadNvencConfigurationPointer",typeof(IntPtr),new[]{typeof(object)},typeof(BitrateRuntime),true);
+                var il=getter.GetILGenerator();il.Emit(OpCodes.Ldarg_0);il.Emit(OpCodes.Castclass,wrapperType);il.Emit(OpCodes.Ldfld,pointer);il.Emit(OpCodes.Conv_I);il.Emit(OpCodes.Ret);
+                configuration=(Func<object,IntPtr>)getter.CreateDelegate(typeof(Func<object,IntPtr>));
+                var rate=streamer.ManifestModule.ResolveField(0x04014FA7);
+                average=FieldOffset(rate)+FieldOffset(streamer.ManifestModule.ResolveField(0x04015127));
+                maximum=FieldOffset(rate)+FieldOffset(streamer.ManifestModule.ResolveField(0x04015128));
+            }
+            catch(Exception e){log("Native NVENC introspection unavailable; managed encoder targets are verified instead: "+e.GetBaseException().Message);return;}
+            nativeWrapperType=wrapperType;nativeConfiguration=configuration;nativeAverageOffset=average;nativeMaximumOffset=maximum;
         }
         private static int FieldOffset(FieldInfo field)
         {
@@ -197,6 +213,7 @@ namespace VirtualDesktop.LibraryOverrides
         }
         public static string ReadNativeRateControl(object wrapper)
         {
+            if(nativeWrapperType==null||nativeConfiguration==null)return "unavailable";
             if(!nativeWrapperType.IsInstanceOfType(wrapper))return "not applicable";
             IntPtr pointer=nativeConfiguration(wrapper);
             if(pointer==IntPtr.Zero)return "not initialized";
@@ -221,7 +238,9 @@ namespace VirtualDesktop.LibraryOverrides
                 "; measuredBandwidth="+Value(mobile,"MeasuredBandwidth")+
                 "; spacewarp="+Value(mobile,"UseSpacewarp")+
                 "; foveated="+Value(mobile,"FoveatedStreaming")+
-                "; targets="+Value(mobile,"VRBitrate")+","+Value(mobile,"H264PlusVRBitrate")+","+Value(mobile,"AV1VRBitrate")+
+                "; targets="+(updatedStreamer
+                    ? Value(mobile,"H264VRBitrate")+","+Value(mobile,"H264PlusVRBitrate")+","+Value(mobile,"HevcVRBitrate")+","+Value(mobile,"AV1VRBitrate")
+                    : Value(mobile,"VRBitrate")+","+Value(mobile,"H264PlusVRBitrate")+","+Value(mobile,"AV1VRBitrate"))+
                 "; encoderTargets="+EncoderDiagnostics(mobile);
         }
         private static object Settings(string name)
