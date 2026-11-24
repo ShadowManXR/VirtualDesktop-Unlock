@@ -188,11 +188,13 @@ internal static class SelfTests
                 var install = controls.OfType<LinkLabel>().Single(x => x.AccessibleName == "Install Virtual Desktop integration");
                 streamer.IntegrationInstalled = false;
                 form.LoadPreview(scan);
-                Check(install.Visible && install.Enabled && !restart.Visible && banner.Text.Contains("Integration not installed"),
-                    "Missing integration shows an install link and hides the restart link");
+                Check(install.Visible && install.Enabled && !restart.Visible && banner.Text.Contains("Integration not installed")
+                    && banner.BackColor == Color.FromArgb(83, 52, 18) && banner.ForeColor == Color.FromArgb(255, 192, 105),
+                    "Missing integration shows orange status and an install link and hides the restart link");
                 form.InstallIntegrationAsync().GetAwaiter().GetResult();
-                Check(streamer.IntegrationInstalls == 1 && !install.Visible && banner.Text.Contains("Integration installed"),
-                    "Successful setup refreshes the integration indicator and hides the install link");
+                Check(streamer.IntegrationInstalls == 1 && !install.Visible && banner.Text.Contains("Integration installed")
+                    && banner.BackColor == Color.FromArgb(22, 48, 49) && banner.ForeColor == Color.FromArgb(108, 218, 188),
+                    "Successful setup restores green status and hides the install link");
                 Check(left.Items.Count == 1 && right.Items.Count == 1, "UI seeds only installed cached VR games");
                 var presetButton=controls.OfType<Button>().Single(x=>x.Text=="Launch Preset");
                 var detailsButton=controls.OfType<Button>().Single(x=>x.Text=="Scan details");
@@ -241,6 +243,14 @@ internal static class SelfTests
                 form.LoadPreview(scan);
                 Check(restart.Visible && restart.Enabled && restart.Text == "Restart Streamer to apply the Fovea Size change.",
                     "Saving a fovea size shows a clickable notice even when library changes are applied");
+                streamer.IsRunning = false;
+                form.LoadPreview(scan);
+                Check(restart.Visible && restart.Enabled && restart.Text == "Run Streamer",
+                    "Pending fovea changes show Run Streamer when Streamer is stopped");
+                streamer.IsRunning = true;
+                form.LoadPreview(scan);
+                Check(restart.Text == "Restart Streamer to apply the Fovea Size change.",
+                    "Running Streamer restores the fovea restart notice");
                 form.RestartStreamerAsync().GetAwaiter().GetResult();
                 Check(!restart.Visible && streamer.AppliedFoveaSize == 30,
                     "The fovea notice clears when the restarted helper confirms the saved size");

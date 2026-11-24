@@ -566,7 +566,7 @@ public sealed class LibraryForm : Form
         if (!busy)
         {
             bool foveaPending = FoveaSizeRequiresRestart();
-            Localizer.SetText(restart, foveaPending
+            Localizer.SetText(restart, !streamerControl.IsRunning ? "Run Streamer" : foveaPending
                 ? "Restart Streamer to apply the Fovea Size change."
                 : "Restart Streamer and reconnect to apply custom additions");
             restart.Visible = installed && (foveaPending || (syncedIds != null && !streamerControl.IsApplied(syncedIds)) ||
@@ -606,9 +606,9 @@ public sealed class LibraryForm : Form
             Localizer.T(steamInstalled ? "{0} detected" : "{0} not detected", "Steam"),
             Localizer.T(ventureInstalled ? "{0} detected" : "{0} not detected", "Venture"),
             Localizer.T(integrationInstalled ? "Integration installed" : "Integration not installed"));
-        connectionStatus.BackColor = !ready ? Color.FromArgb(83, 52, 18)
+        connectionStatus.BackColor = !ready || !integrationInstalled ? Color.FromArgb(83, 52, 18)
             : running ? Color.FromArgb(22, 48, 49) : Color.FromArgb(77, 28, 36);
-        connectionStatus.ForeColor = !ready ? Color.FromArgb(255, 192, 105)
+        connectionStatus.ForeColor = !ready || !integrationInstalled ? Color.FromArgb(255, 192, 105)
             : running ? Accent : Color.FromArgb(255, 151, 160);
     }
 

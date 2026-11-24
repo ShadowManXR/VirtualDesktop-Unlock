@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1-alpha — 2026-11-24
+
+- Show an orange status bar when Virtual Desktop integration is not installed.
+
 ## 0.3.0-alpha — 2026-11-13
 
 - Add standalone Streamer Setup with install location detection and a file picker.
