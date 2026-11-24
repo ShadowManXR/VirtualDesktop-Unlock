@@ -53,6 +53,15 @@ internal static class LocalizationTests
                 form.Size=form.MinimumSize;Application.DoEvents();
                 check(controls.OfType<Button>().All(x=>x.Parent!.ClientRectangle.Contains(x.Bounds)),"Main buttons stay in bounds at minimum size: "+language.Code);
                 Render(form,"minimum");
+                using var about = new AboutForm();
+                about.ShowInTaskbar = false; about.StartPosition = FormStartPosition.Manual;
+                about.Location = new Point(-20000, -20000); about.Show(); Application.DoEvents();
+                var aboutLinks = about.Controls.Cast<Control>().SelectMany(Children).OfType<LinkLabel>().ToArray();
+                check(aboutLinks.Select(link => link.Text).SequenceEqual(new[] { Localizer.T("Repository"), Localizer.T("Donate") }) &&
+                    aboutLinks.Select(link => link.Tag as string).SequenceEqual(
+                    new[] { "https://github.com/ShadowManXR/VirtualDesktop-Unlock", "https://ko-fi.com/shadowmanxr" }),
+                    "About window includes the repository and donation links: " + language.Code);
+                Render(about, "about");
                 using var settings=new SettingsForm(new PreviewStartup(),false,new TraySettings(Path.Combine(root,"LanguageUI",language.Code,"Tray.json")));
                 settings.ShowInTaskbar=false;settings.StartPosition=FormStartPosition.Manual;settings.Location=new Point(-20000,-20000);settings.Show();Application.DoEvents();Render(settings,"settings");
                 using var profiles=new BitrateProfilesForm(new BitratePreferences(Path.Combine(root,"LanguageUI",language.Code,"Bitrate.xml")));

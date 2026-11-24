@@ -1,4 +1,9 @@
 {
+  "Repository": "代码仓库",
+  "Donate": "捐赠",
+  "About Virtual Desktop Unlock": "关于 Virtual Desktop Unlock",
+  "An unofficial program that allows you to unlock certain features in Virtual Desktop Streaming—for example, adding third-party VR games or mods to the streamer's game panel, as well as increasing the bitrate limits for video streaming. Also, set a game launch preset.": "这是一款非官方程序，可解锁 Virtual Desktop Streaming 的部分功能，例如将第三方 VR 游戏或模组添加到 Streamer 的游戏面板，以及提高视频流的码率上限。还可设置游戏启动预设。",
+  "Could not open link": "无法打开链接",
   "Integration update required": "集成需要更新",
   "Virtual Desktop integration needs an update. Click to update.": "Virtual Desktop 集成需要更新。点击更新。",
   "Add VR program": "添加 VR 程序",

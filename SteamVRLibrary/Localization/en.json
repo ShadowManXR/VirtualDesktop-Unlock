@@ -1,4 +1,9 @@
 {
+  "Repository": "Repository",
+  "Donate": "Donate",
+  "About Virtual Desktop Unlock": "About Virtual Desktop Unlock",
+  "An unofficial program that allows you to unlock certain features in Virtual Desktop Streaming—for example, adding third-party VR games or mods to the streamer's game panel, as well as increasing the bitrate limits for video streaming. Also, set a game launch preset.": "An unofficial program that allows you to unlock certain features in Virtual Desktop Streaming—for example, adding third-party VR games or mods to the streamer's game panel, as well as increasing the bitrate limits for video streaming. Also, set a game launch preset.",
+  "Could not open link": "Could not open link",
   "Integration update required": "Integration update required",
   "Virtual Desktop integration needs an update. Click to update.": "Virtual Desktop integration needs an update. Click to update.",
   "Add VR program": "Add VR program",

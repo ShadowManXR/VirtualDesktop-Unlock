@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.3-alpha — 2026-11-24
+
+- Open an About window from the application title, with a description, GitHub repository link, and Ko-fi donation link.
+
 ## 0.3.2-alpha — 2026-11-24
 
 - Add VR executables with optional cover art from a button below Steam games.

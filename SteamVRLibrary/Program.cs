@@ -172,21 +172,33 @@ public sealed class LibraryForm : Form
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         Controls.Add(root);
 
-        var titleRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink };
+        var titleRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink };
         titleRow.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         titleRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         titleRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         titleRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        titleRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        var title = TextLabel("Virtual Desktop Unlock", Color.White, 24, FontStyle.Bold);
-        title.AutoSize = false;
+        var title = new LinkLabel
+        {
+            Text = "Virtual Desktop Unlock", LinkColor = Color.White, ActiveLinkColor = Accent,
+            VisitedLinkColor = Color.White, LinkBehavior = LinkBehavior.NeverUnderline,
+            Font = new Font("Segoe UI", 24, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft,
+            AccessibleName = "About Virtual Desktop Unlock", Cursor = Cursors.Hand
+        };
+        title.LinkClicked += (_, _) =>
+        {
+            using var about = new AboutForm { Icon = Icon };
+            about.ShowDialog(this);
+            search.Focus();
+        };
+        title.AutoSize = true;
         title.AutoEllipsis = true;
         title.Dock = DockStyle.Fill;
         title.Margin = new Padding(0, 0, 10, 0);
         title.MinimumSize = new Size(200, 44);
-        var heading = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink };
-        heading.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        var heading = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1, Margin = Padding.Empty, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink };
         heading.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        heading.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        heading.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         heading.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         heading.Controls.Add(title, 0, 0);
         var settings = MakeButton("⚙");
@@ -200,13 +212,11 @@ public sealed class LibraryForm : Form
         settings.Click += (_, _) => OpenSettings();
         heading.Controls.Add(settings, 1, 0);
         titleRow.Controls.Add(heading, 0, 0);
-        bitrate.Dock = bitrateProfiles.Dock = refresh.Dock = DockStyle.Fill;
-        foreach(var button in new[]{bitrate,bitrateProfiles,refresh}) { button.AutoSize = true; button.AutoSizeMode = AutoSizeMode.GrowAndShrink; button.Padding = new Padding(8,0,8,0); }
+        bitrate.Dock = bitrateProfiles.Dock = DockStyle.Fill;
+        foreach(var button in new[]{bitrate,bitrateProfiles}) { button.AutoSize = true; button.AutoSizeMode = AutoSizeMode.GrowAndShrink; button.Padding = new Padding(8,0,8,0); }
         bitrate.Margin = bitrateProfiles.Margin = new Padding(8, 3, 0, 8);
-        refresh.Margin = new Padding(8, 3, 0, 8);
         titleRow.Controls.Add(bitrate, 1, 0);
         titleRow.Controls.Add(bitrateProfiles, 2, 0);
-        titleRow.Controls.Add(refresh, 3, 0);
         root.Controls.Add(titleRow, 0, 0);
         root.Controls.Add(TextLabel("Choose the games you want to play in VR.", Muted, 11), 0, 1);
 
@@ -218,12 +228,20 @@ public sealed class LibraryForm : Form
         search.BackColor = Card;
         search.ForeColor = Color.White;
         search.Font = new Font("Segoe UI", 11);
-        search.Margin = new Padding(0, 4, 0, 10);
+        search.Margin = new Padding(0, 4, 0, 6);
         search.AccessibleName = "Search games";
-        var searchRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Margin = Padding.Empty };
+        var searchRow = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty,
+            AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink
+        };
+        searchRow.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         searchRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         searchRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        searchRow.Controls.Add(TextLabel("Search", Muted, 10), 0, 0);
+        var searchLabel = TextLabel("Search", Muted, 10);
+        searchLabel.Dock = DockStyle.Fill;
+        searchLabel.Margin = new Padding(0, search.Margin.Top, 8, search.Margin.Bottom);
+        searchRow.Controls.Add(searchLabel, 0, 0);
         searchRow.Controls.Add(search, 1, 0);
         root.Controls.Add(searchRow, 0, 3);
 
@@ -250,16 +268,19 @@ public sealed class LibraryForm : Form
             catch (Exception error) { LocalizedMessageBox.Show(this, error, "Could not delete VR program", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         };
         lists.Controls.Add(MakeCard("VD cache games", "Selected for the headset Games panel", vrCount, vr), 2, 0);
-        var center = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Padding = new Padding(12, 0, 12, 0) };
+        var center = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5, Padding = new Padding(12, 0, 12, 0) };
         center.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
         center.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
         center.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+        center.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
         center.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
-        add.Dock = remove.Dock = DockStyle.Fill;
+        add.Dock = remove.Dock = refresh.Dock = DockStyle.Fill;
         add.Margin = new Padding(0, 0, 0, 8);
         remove.Margin = new Padding(0, 0, 0, 8);
+        refresh.Margin = new Padding(0, 0, 0, 8);
         center.Controls.Add(add, 0, 1);
         center.Controls.Add(remove, 0, 2);
+        center.Controls.Add(refresh, 0, 3);
         lists.Controls.Add(center, 1, 0);
         root.Controls.Add(lists, 0, 4);
 
@@ -771,7 +792,7 @@ public sealed class LibraryForm : Form
     private void AdjustLocalizedLayout()
     {
         int WidthFor(Button b) => TextRenderer.MeasureText(b.Text,b.Font).Width+24;
-        transferColumn.Width = Math.Max(154,Math.Max(WidthFor(add),WidthFor(remove))+24);
+        transferColumn.Width = Math.Max(154,new[] { add, remove, refresh }.Max(WidthFor)+24);
         details.Width=Math.Max(110,WidthFor(details));
         remapButtons.Width=Math.Max(140,WidthFor(remapButtons));
         launchPresets.Width=Math.Max(160,WidthFor(launchPresets));
@@ -780,7 +801,7 @@ public sealed class LibraryForm : Form
         int statusWidth=Math.Max(105,Math.Max(TextRenderer.MeasureText(Localizer.T("Installed"),steam.Font).Width,TextRenderer.MeasureText(Localizer.T("Not installed"),steam.Font).Width)+18);
         foreach(var list in new[]{steam,vr}) { list.Columns[1].Width=statusWidth;list.Columns[0].Width=Math.Max(180,list.ClientSize.Width-statusWidth); }
         int actionWidth = addProgram.Width + deleteProgram.Width + remapButtons.Width + details.Width + launchPresets.Width + 120;
-        MinimumSize=new Size(Math.Max(actionWidth,Math.Max(990,bitrate.PreferredSize.Width+bitrateProfiles.PreferredSize.Width+refresh.PreferredSize.Width+540)),664);
+        MinimumSize=new Size(Math.Max(actionWidth,Math.Max(990,bitrate.PreferredSize.Width+bitrateProfiles.PreferredSize.Width+540)),664);
         int BtnH(Button b) => Math.Max(34, TextRenderer.MeasureText("Ag", b.Font).Height + 18);
         addProgram.Height = deleteProgram.Height = details.Height = launchPresets.Height = remapButtons.Height =
             new[] { addProgram, deleteProgram, remapButtons, details, launchPresets }.Max(BtnH);

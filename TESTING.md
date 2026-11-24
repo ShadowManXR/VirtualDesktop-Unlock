@@ -1,4 +1,4 @@
-# Virtual Desktop Unlock 0.3.2-alpha validation guide
+# Virtual Desktop Unlock 0.3.3-alpha validation guide
 
 This build adds experimental VDXR render resolution and Additional sharpening launch presets for the verified Virtual Desktop Streamer 1.34.25.0 x64 / Quest 3 setup. The user confirmed that the Forefront preset works at 70% horizontal / 70% vertical with the 0.2.1 helper. In 0.2.2, monitored Forefront tests also confirmed Additional sharpening and 50% VDXR render-scale application and exit recovery; the user reported everything working. Other games and runtimes still need individual verification.
 

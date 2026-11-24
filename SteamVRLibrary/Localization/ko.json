@@ -1,4 +1,9 @@
 {
+  "Repository": "저장소",
+  "Donate": "후원",
+  "About Virtual Desktop Unlock": "Virtual Desktop Unlock 정보",
+  "An unofficial program that allows you to unlock certain features in Virtual Desktop Streaming—for example, adding third-party VR games or mods to the streamer's game panel, as well as increasing the bitrate limits for video streaming. Also, set a game launch preset.": "Virtual Desktop Streaming의 일부 기능을 확장하는 비공식 프로그램입니다. 예를 들어 타사 VR 게임이나 모드를 Streamer의 게임 패널에 추가하고, 비디오 스트리밍의 비트레이트 제한을 높일 수 있습니다. 게임 실행 프리셋도 설정할 수 있습니다.",
+  "Could not open link": "링크를 열 수 없습니다",
   "Integration update required": "통합 업데이트 필요",
   "Virtual Desktop integration needs an update. Click to update.": "Virtual Desktop 통합을 업데이트해야 합니다. 클릭하여 업데이트하세요.",
   "Add VR program": "VR 프로그램 추가",

@@ -2,7 +2,7 @@
 param([string]$StreamerPath,[switch]$SkipTests)
 $ErrorActionPreference='Stop'
 $root=$PSScriptRoot
-$version='0.3.2-alpha'
+$version='0.3.3-alpha'
 $env:DOTNET_CLI_HOME=Join-Path $root '.dotnet-build'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'
 $env:DOTNET_GENERATE_ASPNET_CERTIFICATE='false'
