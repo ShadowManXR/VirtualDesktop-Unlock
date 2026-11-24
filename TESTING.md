@@ -1,4 +1,4 @@
-# Virtual Desktop Unlock 0.3.1-alpha validation guide
+# Virtual Desktop Unlock 0.3.2-alpha validation guide
 
 This build adds experimental VDXR render resolution and Additional sharpening launch presets for the verified Virtual Desktop Streamer 1.34.25.0 x64 / Quest 3 setup. The user confirmed that the Forefront preset works at 70% horizontal / 70% vertical with the 0.2.1 helper. In 0.2.2, monitored Forefront tests also confirmed Additional sharpening and 50% VDXR render-scale application and exit recovery; the user reported everything working. Other games and runtimes still need individual verification.
 
@@ -11,7 +11,18 @@ This build adds experimental VDXR render resolution and Additional sharpening la
 
 ## Venture Oculus Games
 
-Use the **0.3.1-alpha** app and helper with verified Streamer **1.34.25.0** and the Venture launcher installed in its default Windows location. VD Unlock scans Venture's default game folder, its configured primary folder, and any additional library folders. Confirm **Show Venture games in Oculus Games** starts unchecked. Enable it and restart Streamer after Venture shows the game as playable. To verify disabling, clear the checkbox, restart Streamer, and confirm the Venture tiles are gone and regular Oculus tiles remain.
+Use the **0.3.2-alpha** app and helper with verified Streamer **1.34.25.0** and the Venture launcher installed in its default Windows location. VD Unlock scans Venture's default game folder, its configured primary folder, and any additional library folders. Confirm **Show Venture games in Oculus Games** starts unchecked. Enable it and restart Streamer after Venture shows the game as playable. To verify disabling, clear the checkbox, restart Streamer, and confirm the Venture tiles are gone and regular Oculus tiles remain.
+
+## Custom VR programs
+
+1. Install the 0.3.2-alpha helper and keep Venture integration disabled.
+2. Click **Add VR program** below Steam games. Choose a VR executable, its display name, and optionally a PNG or JPEG cover.
+3. Confirm the entry appears in dark green. Refresh the library and reopen the app to check persistence.
+4. Select it and use **Add to VR →**, restart Streamer, reconnect the headset, and check Oculus Games for the title and cover. A program added without artwork should show its executable icon centered above its name.
+5. Launch the program from the headset, check its VR runtime, and close it using the headset's close button. Repeat with a game that uses a child executable.
+6. Move the entry back to Steam games, select it, and click **Delete**. Confirm the entry disappears and the executable remains on disk. Selecting an ordinary Steam game should hide Delete.
+
+Launch presets and button remaps currently use Steam app IDs and are available for Steam games. Custom programs use separate dashboard IDs.
 
 Select **VDXR** as the OpenXR runtime in Streamer and reconnect the headset. Open **Games → Oculus Games**, check the original artwork, and select Play. Once the game is running, reopen Games and use **X** on its tile. Check that the game closes and the tile returns to Play. If it fails, check Venture's logs and `%ProgramData%\Virtual Desktop\LibraryOverrides.log` for the game list and supervisor messages.
 

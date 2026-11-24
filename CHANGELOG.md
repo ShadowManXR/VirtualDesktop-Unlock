@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.2-alpha — 2026-11-24
+
+- Add VR executables with optional cover art from a button below Steam games.
+- Generate a cover from the executable icon and program name when artwork is omitted.
+- Show custom programs in dark green and offer Delete when they are selected in Steam games.
+- Include selected custom programs in Oculus Games through the Streamer helper, independently of Venture.
+
 ## 0.3.1-alpha — 2026-11-24
 
 - Show an orange status bar when Virtual Desktop integration is not installed.

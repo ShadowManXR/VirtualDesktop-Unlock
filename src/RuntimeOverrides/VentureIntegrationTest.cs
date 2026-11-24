@@ -19,6 +19,14 @@ internal static class VentureIntegrationTest
 
     private static void Main(string[] args)
     {
+        if (args.Length == 0)
+        {
+            string childMarkerPath = Environment.GetEnvironmentVariable("VD_CUSTOM_TEST_CHILD_MARKER");
+            if (String.IsNullOrEmpty(childMarkerPath)) { Thread.Sleep(30000); return; }
+            using (var child = Process.Start(new ProcessStartInfo(Assembly.GetExecutingAssembly().Location, "--wait") { UseShellExecute = false, CreateNoWindow = true }))
+                File.WriteAllText(childMarkerPath, child.Id.ToString());
+            return;
+        }
         if (args.Length == 1 && args[0] == "--wait") { Thread.Sleep(30000); return; }
         if (args.Length == 2 && args[0] == "--job-parent")
         {
@@ -34,14 +42,20 @@ internal static class VentureIntegrationTest
         module.ResolveField(0x04014843).SetValue(null, root);
         module.ResolveField(0x04014844).SetValue(null, root);
         var runtime = Assembly.LoadFrom(args[1]).GetType("VirtualDesktop.LibraryOverrides.VentureRuntime", true);
+        runtime.GetField("customCatalogPath", All).SetValue(null, Path.Combine(root, "CustomGames.xml"));
         Type preferencesType = runtime.Assembly.GetType("VirtualDesktop.Unlock.VenturePreferences", true);
         object preferences = Activator.CreateInstance(preferencesType, Path.Combine(root, "Venture.enabled"));
         var install = runtime.GetMethod("Install", All);
         var installArgs = new object[] { assembly, new Action<string>(Console.WriteLine), preferences };
         install.Invoke(null, installArgs);
         Check(runtime.GetField("adapter", All).GetValue(null) == null, "Default off leaves Streamer's game-list hook untouched");
-        preferencesType.GetMethod("SetEnabled").Invoke(preferences, new object[] { true });
+        string initialCustomCatalog = Path.Combine(root, "CustomGames.xml");
+        File.WriteAllText(initialCustomCatalog, "<CustomGames version=\"1\" />");
         install.Invoke(null, installArgs);
+        Check(runtime.GetField("adapter", All).GetValue(null) != null,
+            "A custom game catalog installs the dashboard hook while Venture is disabled");
+        File.Delete(initialCustomCatalog);
+        preferencesType.GetMethod("SetEnabled").Invoke(preferences, new object[] { true });
 
         Type collectionType = assembly.GetType("VirtualDesktop.Streamer.GameCollection", true);
         object collection = Activator.CreateInstance(collectionType, true);
@@ -119,6 +133,7 @@ internal static class VentureIntegrationTest
         CheckClose(module, runtime, key, root);
 
         preferencesType.GetMethod("SetEnabled").Invoke(preferences, new object[] { false });
+        CheckCustomGames(module, runtime, collectionType, root);
         var stock = Activator.CreateInstance(collectionType, true);
         var stockTile = ((ConstructorInfo)module.ResolveMethod(0x06000172)).Invoke(new[] { Enum.Parse(platform, "OculusRift"), (object)12345UL });
         collectionType.GetMethod("Add", new[] { itemType }).Invoke(stock, new[] { stockTile });
@@ -166,5 +181,69 @@ internal static class VentureIntegrationTest
             Check(child.WaitForExit(4000), "The stock close routine stops the launcher and its worker");
             Check(SpinWait.SpinUntil(() => !running.Contains(key), 4000), "Streamer clears the Venture running state after exit");
         }
+    }
+
+    private static void CheckCustomGames(Module module, Type runtime, Type collectionType, string root)
+    {
+        string catalog = Path.Combine(root, "CustomGames.xml");
+        string executable = Assembly.GetExecutingAssembly().Location;
+        var document = new System.Xml.XmlDocument();
+        document.LoadXml("<CustomGames version=\"1\"><Game id=\"3000000000\" name=\"Custom VR Game\" selected=\"true\" /></CustomGames>");
+        var game = (System.Xml.XmlElement)document.DocumentElement.FirstChild;
+        game.SetAttribute("executable", executable);
+        game.SetAttribute("cover", Path.Combine(root, "covers", "custom.jpg"));
+        document.Save(catalog);
+        object collection = Activator.CreateInstance(collectionType, true);
+        var append = runtime.GetMethod("AppendCustomGames", All);
+        Check((int)append.Invoke(null, new[] { collection, catalog }) == 1,
+            "Selected third-party executable appears with Venture disabled");
+        Check((int)append.Invoke(null, new[] { collection, catalog }) == 0,
+            "Repeated custom discovery avoids duplicate dashboard entries");
+        Type id = collectionType.BaseType.GetGenericArguments()[0];
+        object platform = Enum.Parse(module.Assembly.GetType("VirtualDesktop.Interfaces.GamePlatform", true), "OculusRift");
+        ulong customId = 0x5644554300000000UL | 3000000000U;
+        object key = Activator.CreateInstance(id, new[] { platform, (object)customId });
+        Type item = collectionType.BaseType.GetGenericArguments()[1];
+        var lookup = collectionType.BaseType.GetMethods(All).Single(method => method.ReturnType == typeof(bool) &&
+            method.GetParameters().Select(parameter => parameter.ParameterType).SequenceEqual(new[] { id, item.MakeByRefType() }));
+        object[] found = { key, null };
+        Check((bool)lookup.Invoke(collection, found), "Custom game uses its own dashboard ID namespace");
+        object entry = found[1];
+        Check((string)((MethodInfo)module.ResolveMethod(0x06000160)).Invoke(entry, null) == "Custom VR Game" &&
+            (string)((MethodInfo)module.ResolveMethod(0x06000162)).Invoke(entry, null) == executable &&
+            (string)((MethodInfo)module.ResolveMethod(0x06000168)).Invoke(entry, null) == game.GetAttribute("cover"),
+            "Custom tile preserves its title, executable and artwork path");
+        string childMarker = Path.Combine(root, "custom-child.pid");
+        Environment.SetEnvironmentVariable("VD_CUSTOM_TEST_CHILD_MARKER", childMarker);
+        try
+        {
+            Check((bool)runtime.GetMethod("TryLaunch", All).Invoke(null, new[] { key, (object)customId }),
+                "Custom game launch is handled independently of Venture");
+        }
+        finally { Environment.SetEnvironmentVariable("VD_CUSTOM_TEST_CHILD_MARKER", null); }
+        var running = (IDictionary)runtime.GetField("runningGames", All).GetValue(null);
+        Check(running[key] is Process && !((Process)running[key]).HasExited,
+            "Custom launch registers a live process for the headset close button");
+        Check(SpinWait.SpinUntil(() => File.Exists(childMarker) && new FileInfo(childMarker).Length > 0, 5000),
+            "Custom bootstrapper starts a child game process");
+        Thread.Sleep(500);
+        using (var child = Process.GetProcessById(Int32.Parse(File.ReadAllText(childMarker))))
+        {
+            Check(running[key] is Process && !((Process)running[key]).HasExited && !child.HasExited,
+                "Custom game stays registered after its bootstrapper exits");
+            module.ResolveMethod(0x0602173B).Invoke(null, new[] { running[key] });
+            Check(child.WaitForExit(4000), "The headset close routine stops the custom child game");
+            Check(SpinWait.SpinUntil(() => !running.Contains(key), 4000), "Closing the custom game clears its running state");
+        }
+        game.SetAttribute("selected", "false");
+        document.Save(catalog);
+        Check((int)append.Invoke(null, new[] { Activator.CreateInstance(collectionType, true), catalog }) == 0,
+            "Deselected custom programs are excluded from the headset library");
+        game.SetAttribute("selected", "true");
+        game.SetAttribute("executable", Path.Combine(root, "missing.exe"));
+        document.Save(catalog);
+        Check((int)append.Invoke(null, new[] { Activator.CreateInstance(collectionType, true), catalog }) == 0,
+            "Missing third-party executables are excluded from the dashboard");
+        File.Delete(catalog);
     }
 }

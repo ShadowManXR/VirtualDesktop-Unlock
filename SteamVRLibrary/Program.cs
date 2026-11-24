@@ -86,6 +86,9 @@ public sealed class LibraryForm : Form
     private bool exiting;
     private readonly LibraryStore store;
     private readonly SharedOverrides sharedOverrides;
+    private readonly CustomGames customGames;
+    private readonly Button addProgram = MakeButton("Add VR program");
+    private readonly Button deleteProgram = MakeButton("Delete");
     private readonly ListView steam = MakeList();
     private readonly ListView vr = MakeList();
     private readonly TextBox search = new() { PlaceholderText = "Search games or Steam app ID…", BorderStyle = BorderStyle.FixedSingle, Dock = DockStyle.Fill };
@@ -121,6 +124,8 @@ public sealed class LibraryForm : Form
         this.preview = preview;
         this.streamerControl = streamerControl ?? new StreamerControl();
         store = new LibraryStore(libraryPath ?? Path.Combine(AppContext.BaseDirectory, "Data", "library.json"));
+        customGames = new CustomGames(preview || libraryPath != null
+            ? Path.Combine(Path.GetDirectoryName(store.Path)!, "CustomGames.xml") : CustomGameCatalog.DefaultPath);
         foveaPreferences = new FoveaSizePreferences(preview || libraryPath != null
             ? Path.Combine(Path.GetDirectoryName(store.Path)!, "FoveaSize.txt") : FoveaSizePreferences.DefaultPath);
         launchPresetStore = new LaunchPresetStore(preview || libraryPath != null
@@ -226,7 +231,24 @@ public sealed class LibraryForm : Form
         lists.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         lists.ColumnStyles.Add(transferColumn = new ColumnStyle(SizeType.Absolute, 154));
         lists.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        lists.Controls.Add(MakeCard("Steam games", "Not in your VR library", steamCount, steam), 0, 0);
+        var steamCard = (TableLayoutPanel)MakeCard("Steam games", "Not in your VR library", steamCount, steam);
+        var customActions = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Margin = Padding.Empty, Padding = new Padding(0, 12, 0, 0) };
+        addProgram.AutoSize = deleteProgram.AutoSize = true;
+        addProgram.Margin = new Padding(0, 0, 8, 0);
+        deleteProgram.Margin = Padding.Empty;
+        deleteProgram.Visible = false;
+        customActions.Controls.AddRange([addProgram, deleteProgram]);
+        lists.Controls.Add(steamCard, 0, 0);
+        addProgram.Click += (_, _) =>
+        {
+            using var dialog = new CustomGameForm((exe, name, cover) => AddCustomProgram(exe, name, cover)) { Icon = Icon };
+            dialog.ShowDialog(this);
+        };
+        deleteProgram.Click += (_, _) =>
+        {
+            try { DeleteCustomPrograms(); }
+            catch (Exception error) { LocalizedMessageBox.Show(this, error, "Could not delete VR program", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+        };
         lists.Controls.Add(MakeCard("VD cache games", "Selected for the headset Games panel", vrCount, vr), 2, 0);
         var center = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Padding = new Padding(12, 0, 12, 0) };
         center.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
@@ -278,7 +300,13 @@ public sealed class LibraryForm : Form
         };
         bitrateProfiles.Click += (_, _) => { using var dialog = new BitrateProfilesForm(bitratePreferences); dialog.Icon = Icon; dialog.ShowDialog(this); };
         Localizer.SetToolTip(tip, bitrate, "Configure codec bitrate ceilings. Requires a compatible helper; headset behavior still needs testing.");
-        root.Controls.Add(actions, 0, 5);
+        var actionRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Margin = Padding.Empty };
+        actionRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        actionRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        actions.AutoSize = true;
+        actionRow.Controls.Add(customActions, 0, 0);
+        actionRow.Controls.Add(actions, 1, 0);
+        root.Controls.Add(actionRow, 0, 5);
         status.AutoEllipsis = true;
         root.Controls.Add(status, 0, 6);
         root.Controls.Add(restart, 0, 7);
@@ -352,6 +380,8 @@ public sealed class LibraryForm : Form
         try
         {
             var next = await Task.Run(() => SteamScanner.Scan());
+            customGames.Reload();
+            next = next with { Games = next.Games.Concat(customGames.Games).ToList() };
             foreach (var warning in next.Warnings)
                 AppLog.Current.Warning("Library scan: " + warning);
             var saved = store.Load();
@@ -361,6 +391,7 @@ public sealed class LibraryForm : Form
                 saved = new LibraryState { Games = next.Games.Where(g => next.CachedVrIds.Contains(g.Id)).Select(g => g with { Origin = "Imported from Virtual Desktop cache" }).ToList() };
                 store.Save(saved);
             }
+            saved.Games.RemoveAll(game => game.IsCustom && !customGames.Games.Any(current => current.Id == game.Id));
             scan = next; state = saved; ready = true;
             Populate();
             SyncOverrides("Loaded library");
@@ -373,7 +404,10 @@ public sealed class LibraryForm : Form
     public void LoadPreview(ScanResult? previewScan = null)
     {
         scan = previewScan ?? SteamScanner.Scan();
+        customGames.Reload();
+        scan = scan with { Games = scan.Games.Where(game => !game.IsCustom).Concat(customGames.Games).ToList() };
         state = store.Load() ?? new LibraryState { Games = scan.Games.Where(g => scan.CachedVrIds.Contains(g.Id)).Select(g => g with { Origin = "Imported from Virtual Desktop cache" }).ToList() };
+        state.Games.RemoveAll(game => game.IsCustom && !customGames.Games.Any(current => current.Id == game.Id));
         ready = true;
         Populate();
         Localizer.SetText(status, "Saved automatically  ·  Connect Virtual Desktop before launching a VR game.");
@@ -408,7 +442,8 @@ public sealed class LibraryForm : Form
             list.Items.Clear();
             foreach (var game in games)
             {
-                var item = new ListViewItem(game.Name) { Tag = game, ForeColor = GameColor(list, game), ToolTipText = Localizer.T("Steam app {0}",game.Id)+$"\n{game.InstallDirectory}\n{Localizer.T(game.Origin)}", Selected = selected.Contains(game.Id) };
+                var item = new ListViewItem(game.Name) { Tag = game, ForeColor = GameColor(list, game),
+                    ToolTipText = game.IsCustom ? game.ExecutablePath : Localizer.T("Steam app {0}",game.Id)+$"\n{game.InstallDirectory}\n{Localizer.T(game.Origin)}", Selected = selected.Contains(game.Id) };
                 item.SubItems.Add(Localizer.T(game.Installed ? "Installed" : "Not installed"));
                 list.Items.Add(item);
             }
@@ -416,7 +451,7 @@ public sealed class LibraryForm : Form
         finally { list.EndUpdate(); }
     }
 
-    private Color GameColor(ListView list, Game game) => list != vr ? list.ForeColor
+    private Color GameColor(ListView list, Game game) => game.IsCustom ? Color.FromArgb(0, 128, 64) : list != vr ? list.ForeColor
         : !scan.CachedVrIds.Contains(game.Id) ? Color.FromArgb(255, 192, 105)
         : scan.MetadataVrIds.Contains(game.Id) ? Color.FromArgb(105, 177, 255) : list.ForeColor;
 
@@ -451,7 +486,10 @@ public sealed class LibraryForm : Form
         restart.Enabled = ready && !busy;
         installIntegration.Enabled = !busy;
         bitrate.Enabled = bitrateProfiles.Enabled = !busy;
-        launchPresets.Enabled = remapButtons.Enabled = ready && !busy && vr.SelectedItems.Count == 1;
+        launchPresets.Enabled = remapButtons.Enabled = ready && !busy && vr.SelectedItems.Count == 1 && !((Game)vr.SelectedItems[0].Tag!).IsCustom;
+        addProgram.Enabled = ready && !busy;
+        deleteProgram.Visible = steam.SelectedItems.Count > 0 && steam.SelectedItems.Cast<ListViewItem>().All(item => ((Game)item.Tag!).IsCustom);
+        deleteProgram.Enabled = ready && !busy;
         details.Enabled = ready && !busy && SelectedGameForDetails() != null;
         add.Enabled = ready && !busy && steam.SelectedItems.Count > 0;
         remove.Enabled = ready && !busy && vr.SelectedItems.Count > 0;
@@ -537,12 +575,30 @@ public sealed class LibraryForm : Form
         catch (Exception e) { LocalizedMessageBox.Show(this, e, "Could not save — move cancelled", MessageBoxButtons.OK, MessageBoxIcon.Error); }
     }
 
+    internal Game AddCustomProgram(string executable, string name, string? cover)
+    {
+        var game = customGames.Add(executable, name, cover, scan.Games.Select(game => game.Id));
+        scan = scan with { Games = scan.Games.Where(game => !game.IsCustom).Concat(customGames.Games).ToList() };
+        Populate();
+        return game;
+    }
+
+    internal void DeleteCustomPrograms()
+    {
+        var selected = steam.SelectedItems.Cast<ListViewItem>().Select(item => (Game)item.Tag!).ToList();
+        if (selected.Count == 0 || selected.Any(game => !game.IsCustom)) return;
+        customGames.Delete(selected.Select(game => game.Id));
+        scan = scan with { Games = scan.Games.Where(game => !game.IsCustom).Concat(customGames.Games).ToList() };
+        Populate();
+    }
+
     private void SyncOverrides(string action, params object[] args)
     {
         try
         {
             sharedOverrides.Save(state);
-            syncedIds = state.Games.Select(g => uint.Parse(g.Id)).Distinct().Order().ToArray();
+            customGames.SyncSelection(state);
+            syncedIds = state.Games.Where(g => !g.IsCustom).Select(g => uint.Parse(g.Id)).Distinct().Order().ToArray();
             Localizer.SetText(status,action,args);
             UpdateRestartNotice();
         }
@@ -557,8 +613,12 @@ public sealed class LibraryForm : Form
     {
         UpdateGameColors();
         bool installed = streamerControl.IntegrationInstalled;
+        bool updateRequired = streamerControl.IntegrationUpdateRequired;
         UpdateConnectionStatus(installed);
-        installIntegration.Visible = !installed;
+        Localizer.SetText(installIntegration, updateRequired
+            ? "Virtual Desktop integration needs an update. Click to update."
+            : "Virtual Desktop integration is not installed. Click to install.");
+        installIntegration.Visible = !installed || updateRequired;
         string previousBitrateText=bitrate.Text;
         Localizer.SetText(bitrate,bitratePreferences.Configuration.Enabled ? "Restore bitrate limits" : "Remove bitrate limits");
         if(previousBitrateText!=bitrate.Text)AdjustLocalizedLayout();
@@ -569,7 +629,7 @@ public sealed class LibraryForm : Form
             Localizer.SetText(restart, !streamerControl.IsRunning ? "Run Streamer" : foveaPending
                 ? "Restart Streamer to apply the Fovea Size change."
                 : "Restart Streamer and reconnect to apply custom additions");
-            restart.Visible = installed && (foveaPending || (syncedIds != null && !streamerControl.IsApplied(syncedIds)) ||
+            restart.Visible = installed && !updateRequired && (CustomGamesRequireRestart() || foveaPending || (syncedIds != null && !streamerControl.IsApplied(syncedIds)) ||
                 bitratePreferences.RequiresRestart);
         }
     }
@@ -582,13 +642,17 @@ public sealed class LibraryForm : Form
 
     private bool RestartChangesPending() =>
         (syncedIds != null && !streamerControl.IsApplied(syncedIds)) ||
-        bitratePreferences.RequiresRestart || FoveaSizeRequiresRestart();
+        bitratePreferences.RequiresRestart || FoveaSizeRequiresRestart() || CustomGamesRequireRestart();
+
+    private bool CustomGamesRequireRestart() => File.Exists(customGames.Path) &&
+        !streamerControl.IsCustomGamesApplied(CustomGameCatalog.Fingerprint(customGames.Path));
 
     internal void UpdateConnectionStatus() => UpdateConnectionStatus(streamerControl.IntegrationInstalled);
 
     private void UpdateConnectionStatus(bool integrationInstalled)
     {
         bool running = streamerControl.IsRunning;
+        bool updateRequired = streamerControl.IntegrationUpdateRequired;
         var iconState = StatusIcons.Select(running, ready);
         if (iconState != CurrentIconState)
         {
@@ -605,16 +669,16 @@ public sealed class LibraryForm : Form
             Localizer.T(ready ? "Loaded" : "Not loaded"),
             Localizer.T(steamInstalled ? "{0} detected" : "{0} not detected", "Steam"),
             Localizer.T(ventureInstalled ? "{0} detected" : "{0} not detected", "Venture"),
-            Localizer.T(integrationInstalled ? "Integration installed" : "Integration not installed"));
-        connectionStatus.BackColor = !ready || !integrationInstalled ? Color.FromArgb(83, 52, 18)
+            Localizer.T(updateRequired ? "Integration update required" : integrationInstalled ? "Integration installed" : "Integration not installed"));
+        connectionStatus.BackColor = !ready || !integrationInstalled || updateRequired ? Color.FromArgb(83, 52, 18)
             : running ? Color.FromArgb(22, 48, 49) : Color.FromArgb(77, 28, 36);
-        connectionStatus.ForeColor = !ready || !integrationInstalled ? Color.FromArgb(255, 192, 105)
+        connectionStatus.ForeColor = !ready || !integrationInstalled || updateRequired ? Color.FromArgb(255, 192, 105)
             : running ? Accent : Color.FromArgb(255, 151, 160);
     }
 
     internal async Task InstallIntegrationAsync()
     {
-        if (busy || streamerControl.IntegrationInstalled) return;
+        if (busy || (streamerControl.IntegrationInstalled && !streamerControl.IntegrationUpdateRequired)) return;
         busy = true;
         UpdateButtons();
         try { await streamerControl.InstallIntegrationAsync(); }
@@ -633,7 +697,8 @@ public sealed class LibraryForm : Form
 
     internal async Task RestartStreamerAsync()
     {
-        if (busy || (syncedIds == null && !FoveaSizeRequiresRestart())) return;
+        if (streamerControl.IntegrationUpdateRequired) { await InstallIntegrationAsync(); return; }
+        if (busy || (syncedIds == null && !FoveaSizeRequiresRestart() && !CustomGamesRequireRestart())) return;
         busy = true; UpdateButtons(); Localizer.SetText(status, "Restarting Streamer…");
         try
         {
@@ -710,12 +775,15 @@ public sealed class LibraryForm : Form
         details.Width=Math.Max(110,WidthFor(details));
         remapButtons.Width=Math.Max(140,WidthFor(remapButtons));
         launchPresets.Width=Math.Max(160,WidthFor(launchPresets));
+        addProgram.Width = WidthFor(addProgram);
+        deleteProgram.Width = WidthFor(deleteProgram);
         int statusWidth=Math.Max(105,Math.Max(TextRenderer.MeasureText(Localizer.T("Installed"),steam.Font).Width,TextRenderer.MeasureText(Localizer.T("Not installed"),steam.Font).Width)+18);
         foreach(var list in new[]{steam,vr}) { list.Columns[1].Width=statusWidth;list.Columns[0].Width=Math.Max(180,list.ClientSize.Width-statusWidth); }
-        MinimumSize=new Size(Math.Max(990,bitrate.PreferredSize.Width+bitrateProfiles.PreferredSize.Width+refresh.PreferredSize.Width+540),664);
+        int actionWidth = addProgram.Width + deleteProgram.Width + remapButtons.Width + details.Width + launchPresets.Width + 120;
+        MinimumSize=new Size(Math.Max(actionWidth,Math.Max(990,bitrate.PreferredSize.Width+bitrateProfiles.PreferredSize.Width+refresh.PreferredSize.Width+540)),664);
         int BtnH(Button b) => Math.Max(34, TextRenderer.MeasureText("Ag", b.Font).Height + 18);
-        details.Height = launchPresets.Height = remapButtons.Height =
-            Math.Max(BtnH(remapButtons), Math.Max(BtnH(details), BtnH(launchPresets)));
+        addProgram.Height = deleteProgram.Height = details.Height = launchPresets.Height = remapButtons.Height =
+            new[] { addProgram, deleteProgram, remapButtons, details, launchPresets }.Max(BtnH);
         int actionH = Math.Max(details.Height, launchPresets.Height);
         if (actionH > 0 && status.Parent is TableLayoutPanel rt && rt.RowStyles.Count > 5) { rt.RowStyles[5].SizeType = SizeType.Absolute; rt.RowStyles[5].Height = actionH + 12 + 8; }
     }

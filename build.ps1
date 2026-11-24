@@ -2,7 +2,7 @@
 param([string]$StreamerPath,[switch]$SkipTests)
 $ErrorActionPreference='Stop'
 $root=$PSScriptRoot
-$version='0.3.1-alpha'
+$version='0.3.2-alpha'
 $env:DOTNET_CLI_HOME=Join-Path $root '.dotnet-build'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'
 $env:DOTNET_GENERATE_ASPNET_CERTIFICATE='false'
@@ -34,12 +34,18 @@ foreach($file in $webpFiles){
 $webpArchive=Join-Path $dependencies 'libwebp-1.6.0-windows-x64.zip'
 Expand-Archive -LiteralPath $webpArchive -DestinationPath $work
 $decoder=Join-Path $work 'libwebp-1.6.0-windows-x64\bin\dwebp.exe'
+$customLauncher=Join-Path $work 'CustomGameLauncher.exe'
+& $compiler /nologo /target:winexe /platform:x64 ('/out:'+$customLauncher) (Join-Path $root 'src\RuntimeOverrides\CustomGameLauncher.cs') (Join-Path $root 'src\RuntimeOverrides\VentureGameProcess.cs')
+if($LASTEXITCODE -ne 0){throw 'Custom game launcher build failed.'}
 $ventureSources=@('/reference:System.Web.Extensions.dll','/reference:System.Drawing.dll',
     "/resource:$decoder,VDUnlock.dwebp.exe",
+    "/resource:$customLauncher,VDUnlock.CustomGameLauncher.exe",
+    (Join-Path $root 'src\RuntimeOverrides\CustomGameLauncher.cs'),
     (Join-Path $root 'src\RuntimeOverrides\VentureRuntime.cs'),
     (Join-Path $root 'src\RuntimeOverrides\VentureWebp.cs'),
     (Join-Path $root 'src\RuntimeOverrides\VentureGameProcess.cs'),
-    (Join-Path $root 'Shared\VenturePreferences.cs'))
+    (Join-Path $root 'Shared\VenturePreferences.cs'),
+    (Join-Path $root 'Shared\CustomGameCatalog.cs'))
 $remapSources=@((Join-Path $root 'src\RuntimeOverrides\ButtonRemapRuntime.cs'),(Join-Path $root 'Shared\ButtonRemapProfile.cs'))
 & $compiler /nologo /target:library ('/out:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) $references $ventureSources $remapSources (Join-Path $root 'src\RuntimeOverrides\LibraryOverrides.cs') (Join-Path $root 'src\RuntimeOverrides\BitrateRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRecovery.cs') (Join-Path $root 'src\RuntimeOverrides\SteamGameLifetime.cs') (Join-Path $root 'Shared\LaunchPresetConfiguration.cs') (Join-Path $root 'Shared\BitrateConfiguration.cs') (Join-Path $root 'Shared\FoveaSizePreferences.cs')
 if($LASTEXITCODE -ne 0){throw 'Runtime helper build failed.'}

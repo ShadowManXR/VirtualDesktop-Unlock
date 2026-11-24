@@ -6,9 +6,10 @@ using Microsoft.Win32;
 
 namespace SteamVRLibrary;
 
-public sealed record Game(string Id, string Name, string InstallDirectory, string Origin = "Added by you")
+public sealed record Game(string Id, string Name, string InstallDirectory, string Origin = "Added by you", string? ExecutablePath = null, string? CoverPath = null)
 {
-    public bool Installed => Directory.Exists(InstallDirectory);
+    public bool IsCustom => !string.IsNullOrEmpty(ExecutablePath);
+    public bool Installed => IsCustom ? File.Exists(ExecutablePath) : Directory.Exists(InstallDirectory);
 }
 
 public sealed class LibraryState

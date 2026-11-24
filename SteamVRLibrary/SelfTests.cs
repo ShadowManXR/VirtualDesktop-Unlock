@@ -195,6 +195,14 @@ internal static class SelfTests
                 Check(streamer.IntegrationInstalls == 1 && !install.Visible && banner.Text.Contains("Integration installed")
                     && banner.BackColor == Color.FromArgb(22, 48, 49) && banner.ForeColor == Color.FromArgb(108, 218, 188),
                     "Successful setup restores green status and hides the install link");
+                streamer.IntegrationUpdateRequired = true;
+                form.LoadPreview(scan);
+                Check(install.Visible && install.Text.Contains("Click to update") && !restart.Visible &&
+                    banner.Text.Contains("Integration update required") && banner.BackColor == Color.FromArgb(83, 52, 18),
+                    "Older helpers show orange update status and an update link instead of a restart notice");
+                form.RestartStreamerAsync().GetAwaiter().GetResult();
+                Check(streamer.IntegrationInstalls == 2 && streamer.Restarts == 0 && !install.Visible,
+                    "Applying changes with an old helper updates the integration before restarting");
                 Check(left.Items.Count == 1 && right.Items.Count == 1, "UI seeds only installed cached VR games");
                 var presetButton=controls.OfType<Button>().Single(x=>x.Text=="Launch Preset");
                 var detailsButton=controls.OfType<Button>().Single(x=>x.Text=="Scan details");
@@ -417,6 +425,7 @@ internal static class SelfTests
                 Check(exitForm.IsDisposed, "Tray Exit closes the application even when tray mode is enabled");
             }
             LaunchPresetTests.Run(root, Check);
+            CustomGameTests.Run(root, Check);
             LocalizationTests.Run(root, Check);
             File.WriteAllLines(Path.Combine(root, "results.txt"), checks);
             File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "self-test-result.txt"), string.Join(Environment.NewLine, checks));
@@ -440,11 +449,13 @@ internal static class SelfTests
         public bool Fail { get; set; }
         public bool IsRunning { get; set; } = true;
         public bool IntegrationInstalled { get; set; } = true;
+        public bool IntegrationUpdateRequired { get; set; }
         public int IntegrationInstalls { get; private set; }
         public Task InstallIntegrationAsync()
         {
             IntegrationInstalls++;
             IntegrationInstalled = true;
+            IntegrationUpdateRequired = false;
             return Task.CompletedTask;
         }
         public int Restarts { get; private set; }

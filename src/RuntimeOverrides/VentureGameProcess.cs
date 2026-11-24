@@ -62,6 +62,27 @@ namespace VirtualDesktop.LibraryOverrides
             Process.Dispose();
         }
 
+        internal bool HasRunningProcesses
+        {
+            get
+            {
+                BasicAccounting accounting;
+                if (!QueryInformationJobObject(job, 1, out accounting, (uint)Marshal.SizeOf(typeof(BasicAccounting)), IntPtr.Zero))
+                    throw new Win32Exception();
+                return accounting.ActiveProcesses != 0;
+            }
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct BasicAccounting
+        {
+            public long UserTime, KernelTime, PeriodUserTime, PeriodKernelTime;
+            public uint PageFaults, TotalProcesses, ActiveProcesses, TerminatedProcesses;
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool QueryInformationJobObject(SafeFileHandle job, int infoClass, out BasicAccounting accounting, uint size, IntPtr returned);
+
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         private struct StartupInfo
         {

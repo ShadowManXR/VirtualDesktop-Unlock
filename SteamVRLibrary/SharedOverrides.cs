@@ -10,7 +10,7 @@ public sealed class SharedOverrides(string path)
     public void Save(LibraryState state)
     {
         // Every selected game participates, regardless of its name, origin or Steam VR metadata.
-        var ids = state.Games.Select(g => uint.Parse(g.Id)).Distinct().Order().ToArray();
+        var ids = state.Games.Where(g => !g.IsCustom).Select(g => uint.Parse(g.Id)).Distinct().Order().ToArray();
         var document = new XDocument(new XElement("VirtualDesktopLibrary", new XAttribute("version", 1),
             ids.Select(id => new XElement("Game", new XAttribute("appId", id)))));
         var bytes = System.Text.Encoding.UTF8.GetBytes(document.ToString());

@@ -2,7 +2,7 @@
 
 # Virtual Desktop Unlock
 
-**v0.3.1-alpha** · Windows x64 · Unofficial · MIT
+**v0.3.2-alpha** · Windows x64 · Unofficial · MIT
 
 An unofficial program for extending Virtual Desktop Streaming. Modifications are applied only to the back-end server component installed on Windows; the client requires no modification. Add custom Steam games, including games that use third-party VR mods, to Virtual Desktop's actual headset Games tab using the optional runtime helper. The desktop companion app organizes your installed Steam games, saves selections for the helper, and provides optional headset-specific bitrate ceilings. There is also an option to set application launch presets, such as for FPS, quality, and FOV tangent.
 
@@ -18,6 +18,11 @@ An unofficial program for extending Virtual Desktop Streaming. Modifications are
 | Game launch presets | Allows you to set custom launch parameters, such as FPS, quality, FOV tangent, VDXR render resolution, and sharpening. These settings are applied before the game launches. Once the game is closed, the settings revert to their original values ​​as configured in VD. |
 | Unlimited bitrate | Allows you to set your own bitrate limit for Wi-Fi or USB connections, though there is no guarantee that the stream will work correctly. This is an experimental feature. |
 | Remap Buttons | Key binding modifications for SteamVR and OpenXR games at the streamer level. |
+| Custom VR executables | Add a VR `.exe` with an optional PNG or JPEG cover. Without a cover, a title card uses the executable's icon and program name. |
+
+Use **Add VR program** below the Steam games list to choose an executable, set its display name, and optionally choose cover art. Custom programs appear in dark green. Select one and use **Add to VR →** to include it in the headset's **Oculus Games** section, then restart Streamer using the link in the app. This requires the 0.3.2-alpha helper and verified Streamer 1.34.25.0. Venture integration can stay disabled. To delete an entry, move it back to **Steam games**, select it, and click **Delete**.
+
+Custom programs currently launch with their default arguments. Launch presets and button remaps are available for Steam games.
 
 ## Download and run
 
@@ -37,7 +42,6 @@ The desktop app writes startup events, library scan warnings, and exception deta
 |---|---|
 | FOV Tangent Fill-Reconstruct | The FOV tangent sets reduced rendering dimensions, which results in the appearance of black areas; these can be filled using various methods, such as gradients, blurring, or mirroring. |
 | Anti-drift stick | Handle stick presses when a finger is resting on the stick, by leveraging the ability to detect finger contact with the stick. A partial solution. |
-| Third-party games not on Steam | Add any VR .exe application, complete with an image, so that it appears in the VD game panel. |
 | Configuring foveated streaming | The ability to adjust the sharpness percentage for a given area, as well as the boundaries of the central zone and the curve that determines the reduction in sampling density. |
 | Fix Dongle Wi-Fi | Add the ability to connect to a PC via a USB or PCIe Wi-Fi adapter. |
 

@@ -12,8 +12,10 @@ public interface IStreamerControl
 {
     bool IsRunning { get; }
     bool IntegrationInstalled { get; }
+    bool IntegrationUpdateRequired => false;
     bool IsApplied(IReadOnlyCollection<uint> ids);
     bool IsFoveaSizeApplied(int size) => false;
+    bool IsCustomGamesApplied(string fingerprint) => false;
     Task RestartAsync();
     Task InstallIntegrationAsync();
 }
@@ -38,6 +40,22 @@ public sealed class StreamerControl : IStreamerControl
     private static string Log => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Virtual Desktop", "LibraryOverrides.log");
 
     public bool IntegrationInstalled => HasIntegration(StreamerLocation.FindInstalledHelperTarget());
+
+    public bool IntegrationUpdateRequired
+    {
+        get
+        {
+            try
+            {
+                string executable = StreamerLocation.FindInstalledHelperTarget();
+                if (!HasIntegration(executable)) return false;
+                var installed = AssemblyName.GetAssemblyName(Path.Combine(Path.GetDirectoryName(executable)!, "VirtualDesktop.LibraryOverrides.dll"));
+                return installed.Version < typeof(Program).Assembly.GetName().Version;
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or BadImageFormatException or ArgumentException)
+            { return false; }
+        }
+    }
 
     internal static bool HasIntegration(string executable)
     {
@@ -121,6 +139,25 @@ public sealed class StreamerControl : IStreamerControl
         var last = lines.LastOrDefault(line => line.Contains(marker, StringComparison.Ordinal) &&
             MatchesProcessStart(line, startedUtc));
         return last?.EndsWith(marker + size + "%.", StringComparison.Ordinal) == true;
+    }
+
+    public bool IsCustomGamesApplied(string fingerprint)
+    {
+        try
+        {
+            var lines = File.ReadAllLines(Log);
+            var processes = Process.GetProcessesByName(ProcessName);
+            try
+            {
+                return processes.Any(process => lines.LastOrDefault(line =>
+                    line.Contains($" [{process.Id}] Custom game catalog applied: ", StringComparison.Ordinal) &&
+                    MatchesProcessStart(line, process.StartTime.ToUniversalTime()))?.EndsWith(
+                        "Custom game catalog applied: " + fingerprint, StringComparison.Ordinal) == true);
+            }
+            finally { foreach (var process in processes) process.Dispose(); }
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or InvalidOperationException)
+        { return false; }
     }
 
     public async Task RestartAsync()

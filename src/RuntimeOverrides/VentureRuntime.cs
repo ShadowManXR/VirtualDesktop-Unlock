@@ -30,11 +30,12 @@ namespace VirtualDesktop.LibraryOverrides
         private static readonly Dictionary<object, VentureGameProcess> sessions = new Dictionary<object, VentureGameProcess>();
         private static IDictionary runningGames;
         private static MethodInfo chooseRuntime, notifyExit;
+        private static string customCatalogPath = CustomGameCatalog.DefaultPath;
 
         // Called only after Manager has verified Streamer 1.34.25 and its exact hash.
         internal static void Install(Assembly assembly, Action<string> logger, VenturePreferences settings)
         {
-            if (!settings.Enabled)
+            if (!settings.Enabled && !File.Exists(customCatalogPath))
             {
                 logger("Venture integration disabled in Settings.");
                 return;
@@ -92,23 +93,78 @@ namespace VirtualDesktop.LibraryOverrides
             log = logger;
             LaunchPresetRuntime.Redirect(entry, handle, new byte[] { 0x55, 0x41, 0x56, 0x57, 0x56, 0x53, 0x48, 0x81, 0xEC, 0x80, 0, 0, 0 });
             log("Venture game-list hook installed.");
+            try
+            {
+                string fingerprint = CustomGameCatalog.Fingerprint(customCatalogPath);
+                CustomGameCatalog.Read(customCatalogPath);
+                if (fingerprint == CustomGameCatalog.Fingerprint(customCatalogPath))
+                    log("Custom game catalog applied: " + fingerprint);
+            }
+            catch (Exception error) { log("Custom game catalog rejected: " + error.Message); }
         }
 
         public static async Task<T> Load<T>()
         {
             T collection = await ((Task<T>)original()).ConfigureAwait(false);
-            if (!preferences.Enabled) return collection;
             try
             {
                 string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
                 string launcher = VenturePreferences.LauncherPath;
                 string data = Path.Combine(local, "Venture");
                 string art = Path.Combine(local, "Virtual Desktop Unlock", "VentureTiles");
-                int count = AppendInstalledGames(collection, data, launcher, art);
-                log("Venture added " + count + " completed games to Oculus Games.");
+                if (preferences.Enabled)
+                {
+                    int count = AppendInstalledGames(collection, data, launcher, art);
+                    log("Venture added " + count + " completed games to Oculus Games.");
+                }
             }
             catch (Exception error) { log("Venture game list skipped: " + error.Message); }
+            try
+            {
+                string fingerprint = CustomGameCatalog.Fingerprint(customCatalogPath);
+                int count = AppendCustomGames(collection, customCatalogPath);
+                if (fingerprint != CustomGameCatalog.Fingerprint(customCatalogPath))
+                    throw new IOException("Custom game catalog changed during discovery.");
+                log("Custom games added: " + count + ".");
+                log("Custom game catalog applied: " + fingerprint);
+            }
+            catch (Exception error) { log("Custom game list skipped: " + error.Message); }
             return collection;
+        }
+
+        internal static int AppendCustomGames(object collection, string path)
+        {
+            var entries = CustomGameCatalog.Read(path);
+            Type collectionType = collection.GetType();
+            Type item = collectionType.BaseType.GetGenericArguments()[1];
+            Module module = item.Module;
+            var constructor = (ConstructorInfo)module.ResolveMethod(0x06000172);
+            Type platform = constructor.GetParameters()[0].ParameterType;
+            object oculus = Enum.Parse(platform, "OculusRift");
+            var setters = new[] { 0x06000161, 0x06000163, 0x06000165, 0x06000167, 0x06000169 }
+                .Select(token => (MethodInfo)module.ResolveMethod(token)).ToArray();
+            MethodInfo add = collectionType.GetMethod("Add", new[] { item });
+            Type idType = collectionType.BaseType.GetGenericArguments()[0];
+            ConstructorInfo idConstructor = idType.GetConstructor(new[] { platform, typeof(ulong) });
+            MethodInfo lookup = collectionType.BaseType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                .Single(method => method.ReturnType == typeof(bool) && method.GetParameters().Select(p => p.ParameterType).SequenceEqual(new[] { idType, item.MakeByRefType() }));
+            int count = 0;
+            lock (catalogLock)
+            {
+                foreach (ulong key in tiles.Where(pair => pair.Value.Custom).Select(pair => pair.Key).ToArray()) tiles.Remove(key);
+                foreach (var entry in entries.Where(entry => entry.Selected && File.Exists(entry.Executable)))
+                {
+                    object key = idConstructor.Invoke(new object[] { oculus, entry.DashboardId });
+                    object[] found = { key, null };
+                    bool exists = (bool)lookup.Invoke(collection, found);
+                    object game = exists ? found[1] : constructor.Invoke(new object[] { oculus, entry.DashboardId });
+                    string[] values = { entry.Name, entry.Executable, "", Path.GetDirectoryName(entry.Executable), entry.Cover };
+                    for (int index = 0; index < setters.Length; index++) setters[index].Invoke(game, new object[] { values[index] });
+                    if (!exists) { add.Invoke(collection, new[] { game }); count++; }
+                    tiles[entry.DashboardId] = new Tile { Item = game, Launcher = entry.Executable, Arguments = "", Custom = true };
+                }
+            }
+            return count;
         }
 
         internal static int AppendInstalledGames(object collection, string data, string launcher, string art)
@@ -226,7 +282,7 @@ namespace VirtualDesktop.LibraryOverrides
                 Tile tile;
                 if (!tiles.TryGetValue(id, out tile)) return false;
                 if (sessions.ContainsKey(game)) return true;
-                if (!preferences.Enabled)
+                if (!tile.Custom && !preferences.Enabled)
                 {
                     ReportExit(game);
                     return true;
@@ -234,7 +290,9 @@ namespace VirtualDesktop.LibraryOverrides
                 try
                 {
                     chooseRuntime.Invoke(null, new[] { tile.Item, null });
-                    Register(game, tile.Launcher, tile.Arguments);
+                    if (tile.Custom)
+                        Register(game, CustomGameLauncher.Extract(), Convert.ToBase64String(Encoding.Unicode.GetBytes(tile.Launcher)));
+                    else Register(game, tile.Launcher, tile.Arguments);
                 }
                 catch (Exception error)
                 {
@@ -286,6 +344,7 @@ namespace VirtualDesktop.LibraryOverrides
         {
             internal object Item;
             internal string Launcher, Arguments;
+            internal bool Custom;
         }
 
         private static bool IsComplete(string version, string package, out string id)
