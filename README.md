@@ -8,7 +8,7 @@ An unofficial program for extending Virtual Desktop Streaming. Modifications are
 
 > The application has only been tested on the Quest 3. The Quest client may differ from the versions for Pico 4, Galaxy XR (Android XR), HTC Vive Focus 3, etc., so this mod might not function correctly on those devices. Additionally, the mod is still under development and may contain bugs.
 
-![Virtual Desktop headset Games panel showing custom Steam games](screenshots/0.2.3/VirtualDesktop.Android-20261109-224448.jpg)
+![Virtual Desktop headset Games panel showing custom Steam games](screenshots/0.3.4/VirtualDesktop.Android-20261124-235742.jpg)
 
 ## Unlock features
 
@@ -52,19 +52,23 @@ These desktop screenshots were captured in v0.2.8.
 
 **Game library**
 
-![Main window showing the Steam games and VD cache games lists](screenshots/0.2.8/Screenshot%202026-11-13%20172307.png)
+![Main window showing the Steam games and VD cache games lists](screenshots/0.3.4/Screenshot%202026-11-24%20214541.png)
 
 **Bitrate profiles**
 
-![Quest 3 Wi-Fi bitrate profile with limits for H.264, H.265, and AV1](screenshots/0.2.8/Screenshot%202026-11-13%20172342.png)
+![Quest 3 Wi-Fi bitrate profile with limits for H.264, H.265, and AV1](screenshots/0.3.4/Screenshot%202026-11-24%20214604.png)
 
 **Launch preset**
 
-![Forefront launch preset with quality, FPS, FOV tangent, render resolution, and sharpening controls](screenshots/0.2.8/Screenshot%202026-11-13%20172428.png)
+![Forefront launch preset with quality, FPS, FOV tangent, render resolution, and sharpening controls](screenshots/0.3.4/Screenshot%202026-11-24%20214636.png)
 
 **Scan details**
 
-![Forefront scan results showing advertised OpenVR and OpenXR support and the last observed VDXR runtime](screenshots/0.2.8/Screenshot%202026-11-13%20172514.png)
+![Forefront scan results showing advertised OpenVR and OpenXR support and the last observed VDXR runtime](screenshots/0.3.4/Screenshot%202026-11-24%20214714.png)
+
+**Monitoring**
+
+![Monitoring](screenshots/0.3.4/Screenshot%202026-11-24%20213240.png)
 
 ## Build
 
