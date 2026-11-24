@@ -19,26 +19,6 @@ An unofficial program for extending Virtual Desktop Streaming. Modifications are
 | Unlimited bitrate | Allows you to set your own bitrate limit for Wi-Fi or USB connections, though there is no guarantee that the stream will work correctly. This is an experimental feature. |
 | Remap Buttons | Key binding modifications for SteamVR and OpenXR games at the streamer level. |
 
-## Screenshots
-
-These desktop screenshots were captured in v0.2.8.
-
-**Game library**
-
-![Main window showing the Steam games and VD cache games lists](screenshots/0.2.8/Screenshot%202026-11-13%20172307.png)
-
-**Bitrate profiles**
-
-![Quest 3 Wi-Fi bitrate profile with limits for H.264, H.265, and AV1](screenshots/0.2.8/Screenshot%202026-11-13%20172342.png)
-
-**Launch preset**
-
-![Forefront launch preset with quality, FPS, FOV tangent, render resolution, and sharpening controls](screenshots/0.2.8/Screenshot%202026-11-13%20172428.png)
-
-**Scan details**
-
-![Forefront scan results showing advertised OpenVR and OpenXR support and the last observed VDXR runtime](screenshots/0.2.8/Screenshot%202026-11-13%20172514.png)
-
 ## Download and run
 
 Download the archive from [Release](https://github.com/ShadowManXR/VirtualDesktop-Unlock/releases)
@@ -58,7 +38,28 @@ The desktop app writes startup events, library scan warnings, and exception deta
 | FOV Tangent Fill-Reconstruct | The FOV tangent sets reduced rendering dimensions, which results in the appearance of black areas; these can be filled using various methods, such as gradients, blurring, or mirroring. |
 | Anti-drift stick | Handle stick presses when a finger is resting on the stick, by leveraging the ability to detect finger contact with the stick. A partial solution. |
 | Third-party games not on Steam | Add any VR .exe application, complete with an image, so that it appears in the VD game panel. |
-| Configuring foveated streaming| The ability to adjust the sharpness percentage for a given area, as well as the boundaries of the central zone and the curve that determines the reduction in sampling density. |
+| Configuring foveated streaming | The ability to adjust the sharpness percentage for a given area, as well as the boundaries of the central zone and the curve that determines the reduction in sampling density. |
+| Fix Dongle Wi-Fi | Add the ability to connect to a PC via a USB or PCIe Wi-Fi adapter. |
+
+## Screenshots
+
+These desktop screenshots were captured in v0.2.8.
+
+**Game library**
+
+![Main window showing the Steam games and VD cache games lists](screenshots/0.2.8/Screenshot%202026-11-13%20172307.png)
+
+**Bitrate profiles**
+
+![Quest 3 Wi-Fi bitrate profile with limits for H.264, H.265, and AV1](screenshots/0.2.8/Screenshot%202026-11-13%20172342.png)
+
+**Launch preset**
+
+![Forefront launch preset with quality, FPS, FOV tangent, render resolution, and sharpening controls](screenshots/0.2.8/Screenshot%202026-11-13%20172428.png)
+
+**Scan details**
+
+![Forefront scan results showing advertised OpenVR and OpenXR support and the last observed VDXR runtime](screenshots/0.2.8/Screenshot%202026-11-13%20172514.png)
 
 ## Build
 
