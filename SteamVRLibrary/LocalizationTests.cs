@@ -62,6 +62,10 @@ internal static class LocalizationTests
                     new[] { "https://github.com/ShadowManXR/VirtualDesktop-Unlock", "https://ko-fi.com/shadowmanxr" }),
                     "About window includes the repository and donation links: " + language.Code);
                 Render(about, "about");
+                using var monitoring = new MonitoringForm(new MonitoringHistory(), collect: false);
+                monitoring.ShowInTaskbar = false; monitoring.StartPosition = FormStartPosition.Manual;
+                monitoring.Location = new Point(-20000, -20000); monitoring.Show(); Application.DoEvents();
+                Render(monitoring, "monitoring");
                 using var settings=new SettingsForm(new PreviewStartup(),false,new TraySettings(Path.Combine(root,"LanguageUI",language.Code,"Tray.json")));
                 settings.ShowInTaskbar=false;settings.StartPosition=FormStartPosition.Manual;settings.Location=new Point(-20000,-20000);settings.Show();Application.DoEvents();Render(settings,"settings");
                 using var profiles=new BitrateProfilesForm(new BitratePreferences(Path.Combine(root,"LanguageUI",language.Code,"Bitrate.xml")));

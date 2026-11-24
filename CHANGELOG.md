@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.4-alpha — 2026-11-24
+
+- Add Monitoring beside the bitrate controls, with FPS, measured video bitrate, and headset battery graphs.
+- Collect one sample per second only while the Monitoring window is open and retain up to two hours in memory.
+- Switch the graph time range between 1 minute, 5 minutes, 30 minutes, and 2 hours.
+- Show red sample values when hovering over monitoring graphs and averages for the selected time range in each graph's upper-right corner.
+- Open Monitoring directly from the system tray menu, including while the main window is hidden.
+- Add a latency chart with Total, Game render time, and Encoding time series, per-series averages, and red hover readings.
+- Pause and restore the Virtual Desktop background service during integration maintenance to prevent Streamer from restarting and locking the helper DLL during updates.
+
 ## 0.3.3-alpha — 2026-11-24
 
 - Open an About window from the application title, with a description, GitHub repository link, and Ko-fi donation link.

@@ -426,6 +426,7 @@ internal static class SelfTests
             }
             LaunchPresetTests.Run(root, Check);
             CustomGameTests.Run(root, Check);
+            MonitoringTests.Run(root, Check);
             LocalizationTests.Run(root, Check);
             File.WriteAllLines(Path.Combine(root, "results.txt"), checks);
             File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "self-test-result.txt"), string.Join(Environment.NewLine, checks));

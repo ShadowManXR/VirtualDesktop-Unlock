@@ -76,6 +76,9 @@ public sealed class LibraryForm : Form
     private readonly BitratePreferences bitratePreferences;
     private readonly Button bitrate = MakeButton("Remove bitrate limits", primary: true);
     private readonly Button bitrateProfiles = MakeButton("Bitrate profiles…");
+    private readonly Button monitoringButton = MakeButton("Monitoring");
+    private readonly MonitoringHistory monitoringHistory = new();
+    private MonitoringForm? monitoringWindow;
     private readonly Button launchPresets = MakeButton("Launch Preset");
     private readonly LaunchPresetStore launchPresetStore;
     private readonly Label bitrateStatus = TextLabel("Stock bitrate limits", Muted, 9);
@@ -143,6 +146,7 @@ public sealed class LibraryForm : Form
         trayIcon.Icon = Icon;
         trayIcon.Text = "Virtual Desktop Unlock";
         trayMenu.Items.Add("Open", null, (_, _) => RestoreAndActivate());
+        trayMenu.Items.Add("Monitoring", null, (_, _) => OpenMonitoring());
         trayMenu.Items.Add("Settings", null, (_, _) => OpenSettings());
         trayMenu.Items.Add(new ToolStripSeparator());
         trayMenu.Items.Add("Exit", null, (_, _) => ExitApplication());
@@ -172,9 +176,10 @@ public sealed class LibraryForm : Form
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         Controls.Add(root);
 
-        var titleRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink };
+        var titleRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink };
         titleRow.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         titleRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        titleRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         titleRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         titleRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         var title = new LinkLabel
@@ -212,11 +217,13 @@ public sealed class LibraryForm : Form
         settings.Click += (_, _) => OpenSettings();
         heading.Controls.Add(settings, 1, 0);
         titleRow.Controls.Add(heading, 0, 0);
-        bitrate.Dock = bitrateProfiles.Dock = DockStyle.Fill;
-        foreach(var button in new[]{bitrate,bitrateProfiles}) { button.AutoSize = true; button.AutoSizeMode = AutoSizeMode.GrowAndShrink; button.Padding = new Padding(8,0,8,0); }
-        bitrate.Margin = bitrateProfiles.Margin = new Padding(8, 3, 0, 8);
+        bitrate.Dock = bitrateProfiles.Dock = monitoringButton.Dock = DockStyle.Fill;
+        foreach(var button in new[]{bitrate,bitrateProfiles,monitoringButton}) { button.AutoSize = true; button.AutoSizeMode = AutoSizeMode.GrowAndShrink; button.Padding = new Padding(8,0,8,0); }
+        bitrate.Margin = bitrateProfiles.Margin = monitoringButton.Margin = new Padding(8, 3, 0, 8);
         titleRow.Controls.Add(bitrate, 1, 0);
         titleRow.Controls.Add(bitrateProfiles, 2, 0);
+        titleRow.Controls.Add(monitoringButton, 3, 0);
+        monitoringButton.Click += (_, _) => OpenMonitoring();
         root.Controls.Add(titleRow, 0, 0);
         root.Controls.Add(TextLabel("Choose the games you want to play in VR.", Muted, 11), 0, 1);
 
@@ -761,6 +768,16 @@ public sealed class LibraryForm : Form
         NativeWindowActivation.SetForegroundWindow(Handle);
     }
 
+    private void OpenMonitoring()
+    {
+        if (monitoringWindow == null || monitoringWindow.IsDisposed)
+            monitoringWindow = new MonitoringForm(monitoringHistory, collect: !preview) { Icon = Icon };
+        // Keep Monitoring independent so it can open while the main window is hidden in the tray.
+        monitoringWindow.Show();
+        monitoringWindow.WindowState = FormWindowState.Normal;
+        monitoringWindow.Activate();
+    }
+
     private void OpenSettings()
     {
         RestoreAndActivate();
@@ -801,7 +818,7 @@ public sealed class LibraryForm : Form
         int statusWidth=Math.Max(105,Math.Max(TextRenderer.MeasureText(Localizer.T("Installed"),steam.Font).Width,TextRenderer.MeasureText(Localizer.T("Not installed"),steam.Font).Width)+18);
         foreach(var list in new[]{steam,vr}) { list.Columns[1].Width=statusWidth;list.Columns[0].Width=Math.Max(180,list.ClientSize.Width-statusWidth); }
         int actionWidth = addProgram.Width + deleteProgram.Width + remapButtons.Width + details.Width + launchPresets.Width + 120;
-        MinimumSize=new Size(Math.Max(actionWidth,Math.Max(990,bitrate.PreferredSize.Width+bitrateProfiles.PreferredSize.Width+540)),664);
+        MinimumSize=new Size(Math.Max(actionWidth,Math.Max(990,bitrate.PreferredSize.Width+bitrateProfiles.PreferredSize.Width+monitoringButton.PreferredSize.Width+540)),664);
         int BtnH(Button b) => Math.Max(34, TextRenderer.MeasureText("Ag", b.Font).Height + 18);
         addProgram.Height = deleteProgram.Height = details.Height = launchPresets.Height = remapButtons.Height =
             new[] { addProgram, deleteProgram, remapButtons, details, launchPresets }.Max(BtnH);
@@ -858,6 +875,7 @@ public sealed class LibraryForm : Form
             traySettings.Changed -= TraySettingChanged;
             bitratePreferences.Changed -= BitrateChanged;
             Localizer.Changed -= LanguageChanged;
+            monitoringWindow?.Dispose();
             trayIcon.Visible = false;
             trayIcon.Dispose(); trayMenu.Dispose(); restartTimer.Dispose(); tip.Dispose();
             statusIcons.Dispose();

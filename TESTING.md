@@ -1,4 +1,4 @@
-# Virtual Desktop Unlock 0.3.3-alpha validation guide
+# Virtual Desktop Unlock 0.3.4-alpha validation guide
 
 This build adds experimental VDXR render resolution and Additional sharpening launch presets for the verified Virtual Desktop Streamer 1.34.25.0 x64 / Quest 3 setup. The user confirmed that the Forefront preset works at 70% horizontal / 70% vertical with the 0.2.1 helper. In 0.2.2, monitored Forefront tests also confirmed Additional sharpening and 50% VDXR render-scale application and exit recovery; the user reported everything working. Other games and runtimes still need individual verification.
 
@@ -8,6 +8,14 @@ This build adds experimental VDXR render resolution and Additional sharpening la
 2. Extract the ZIP into a new writable folder. Copy your previous app's `Data` folder into it to retain library selections. Shared launch presets are already stored in `%APPDATA%\Virtual Desktop Unlock`.
 3. Run **Install Streamer Helper.exe**, approve the Windows prompt, and confirm the detected Streamer installation. Choose **No** to browse to a different installation. Setup restarts Streamer and can upgrade a helper whose files match its existing installation record. To remove the helper from a custom location, run the setup executable with `--uninstall`.
 4. Open **Virtual Desktop Unlock.exe** from this build and reconnect VD to the PC. The app requires .NET Desktop Runtime 10. The advanced launch presets require helper 0.2.2 or later.
+
+## Monitoring
+
+Install helper 0.3.4-alpha with verified Streamer 1.34.25.0 and open **Monitoring** beside the bitrate controls or from the system tray menu. The three graphs show encoded-stream FPS, sent video payload Mbps, and headset battery percentage. Select **1 minute**, **5 minutes**, **30 minutes**, or **2 hours** to change the displayed range. Collection runs once per second only while the Monitoring window is open, including when minimized. Closing it stops collection; reopening resumes collection and leaves a gap for the closed period. History is held in memory and limited to two hours or 7200 samples.
+
+During a live check, confirm FPS and bitrate appear after starting a VR game, and check battery percentage and charging against the headset. Try spacewarp, different codecs, and foveated streaming. FPS describes unique encoded frame IDs, so spacewarp can produce a different reading from the headset's FPS display. Disconnect and reconnect to verify gaps replace stale readings. Reopen Monitoring and confirm recent history is preserved. Application exit ends the collection session.
+
+For the latency chart, update the integration to helper assembly revision **0.3.4.1** (included in 0.3.4-alpha). Compare Total, Game render time, and Encoding time against VD's overlay during a VR game. Total comes from headset latency feedback in seconds, converted to milliseconds; Game and Encoding show averages of unique encoded frames during each sampling interval, so their smoothing can differ from VD's overlay. Verify each series has its own average and red hover reading, and disconnected or stale feedback leaves gaps. Verify collection stops when Monitoring closes and resumes when reopened.
 
 ## Venture Oculus Games
 

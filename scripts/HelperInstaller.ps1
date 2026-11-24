@@ -4,6 +4,29 @@ param(
     [string]$StreamerDirectory=(Join-Path $env:ProgramFiles 'Virtual Desktop Streamer')
 )
 $ErrorActionPreference='Stop'
+
+function Invoke-WithStreamerServicePaused([scriptblock]$Action){
+    # The service can relaunch Streamer between Stop-Process and Copy-Item.
+    # Preserve its initial state, including when installation or rollback fails.
+    $service=Get-Service -Name 'VirtualDesktop.Service.exe' -ErrorAction SilentlyContinue
+    $resumeService=$false
+    try{
+        if($service -and $service.Status -ne [System.ServiceProcess.ServiceControllerStatus]::Stopped){
+            $resumeService=$true
+            Write-Output 'Pausing the Virtual Desktop service during helper maintenance.'
+            Stop-Service -InputObject $service -ErrorAction Stop
+            $service.WaitForStatus([System.ServiceProcess.ServiceControllerStatus]::Stopped,[TimeSpan]::FromSeconds(30))
+        }
+        & $Action
+    }finally{
+        if($resumeService){
+            Start-Service -InputObject $service -ErrorAction Stop
+            $service.WaitForStatus([System.ServiceProcess.ServiceControllerStatus]::Running,[TimeSpan]::FromSeconds(30))
+            Write-Output 'Restored the Virtual Desktop service.'
+        }
+    }
+}
+
 $StreamerDirectory=[IO.Path]::GetFullPath($StreamerDirectory)
 $exe=Join-Path $StreamerDirectory 'VirtualDesktop.Streamer.exe'
 $dll=Join-Path $StreamerDirectory 'VirtualDesktop.LibraryOverrides.dll'
@@ -50,6 +73,7 @@ try{
             if((Test-Path -LiteralPath $item[0]) -and (!$record -or (Get-FileHash -LiteralPath $item[0]).Hash -ne $item[1])){throw ('An unrelated or different-version file already exists: '+$item[0]+'. Remove that helper with its original uninstaller before installing this release.')}
         }
     }
+    Invoke-WithStreamerServicePaused {
     $processes=@(Get-Process -Name VirtualDesktop.Streamer -ErrorAction SilentlyContinue | Where-Object { $_.Path -and [IO.Path]::GetFullPath($_.Path) -eq $exe })
     $processes | Stop-Process -ErrorAction Stop
     if($processes.Count){$processes | Wait-Process -Timeout 15 -ErrorAction Stop}
@@ -86,5 +110,6 @@ try{
         }
         Start-Process -FilePath $exe -WorkingDirectory $StreamerDirectory -WindowStyle Hidden
         throw $failure
+    }
     }
 }finally{Stop-Transcript | Out-Null}

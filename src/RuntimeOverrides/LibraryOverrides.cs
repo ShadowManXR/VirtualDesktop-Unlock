@@ -9,9 +9,9 @@ using System.Xml;
 using System.Security.Cryptography;
 using VirtualDesktop.Unlock;
 
-[assembly: AssemblyVersion("0.3.3.0")]
+[assembly: AssemblyVersion("0.3.4.1")]
 [assembly: AssemblyTitle("Virtual Desktop Library Overrides")]
-[assembly: AssemblyFileVersion("0.3.3.0")]
+[assembly: AssemblyFileVersion("0.3.4.1")]
 
 namespace VirtualDesktop.LibraryOverrides
 {
@@ -96,6 +96,11 @@ namespace VirtualDesktop.LibraryOverrides
                     {
                         try { BitrateRuntime.Install(assembly,Log); }
                         catch (Exception e) { Log("Bitrate hook unavailable; original bitrate behavior retained: "+e); }
+                        if (updated && String.IsNullOrEmpty(testDirectory))
+                        {
+                            try { MonitoringRuntime.Install(assembly, Log); }
+                            catch (Exception e) { Log("Monitoring unavailable: " + e); }
+                        }
                         if (updated && String.IsNullOrEmpty(testDirectory))
                         {
                             try
