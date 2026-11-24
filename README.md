@@ -14,12 +14,11 @@ An unofficial program for extending Virtual Desktop Streaming. Modifications are
 
 | Feature | Description |
 |---|---|
-| Third-party games | Adds custom Steam IDs to Streamer's game discovery. There is also an option to add games from [Venture](https://github.com/Villagers654/Venture) to the Oculus Games category (this feature has not yet been tested on the Pico 4).  |
+| Third-party games | Adds custom Steam IDs to Streamer's game discovery. There is also an option to add games from [Venture](https://github.com/Villagers654/Venture) to the Oculus Games category (this feature has not yet been tested on the Pico 4). Add a VR `.exe` with an optional PNG or JPEG cover. Without a cover, a title card uses the executable's icon and program name. |
 | Game launch presets | Allows you to set custom launch parameters, such as FPS, quality, FOV tangent, VDXR render resolution, and sharpening. These settings are applied before the game launches. Once the game is closed, the settings revert to their original values ​​as configured in VD. |
 | Unlimited bitrate | Allows you to set your own bitrate limit for Wi-Fi or USB connections, though there is no guarantee that the stream will work correctly. This is an experimental feature. |
 | Remap Buttons | Key binding modifications for SteamVR and OpenXR games at the streamer level. |
-| Custom VR executables | Add a VR `.exe` with an optional PNG or JPEG cover. Without a cover, a title card uses the executable's icon and program name. |
-| Monitoring | View FPS, measured video payload bitrate, battery, and latency graphs with hover readings and averages. Samples are collected every second only while Monitoring is open, with a rolling two-hour history and four time ranges. Latency requires helper revision 0.3.4.1 and verified Streamer 1.34.25.0. The latency chart displays Total, Game render time, and Encoding time. |
+| Monitoring | View FPS, measured video payload bitrate, battery, and latency graphs with hover readings and averages. Samples are collected every second only while Monitoring is open, with a rolling two-hour history and four time ranges.|
 
 Use **Add VR program** below the Steam games list to choose an executable, set its display name, and optionally choose cover art. Custom programs appear in dark green. Select one and use **Add to VR →** to include it in the headset's **Oculus Games** section, then restart Streamer using the link in the app. This requires the 0.3.2-alpha helper and verified Streamer 1.34.25.0. Venture integration can stay disabled. To delete an entry, move it back to **Steam games**, select it, and click **Delete**.
 
