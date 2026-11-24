@@ -14,7 +14,7 @@ An unofficial program for extending Virtual Desktop Streaming. Modifications are
 
 | Feature | Description |
 |---|---|
-| Third-party games | Adds custom Steam IDs to Streamer's game discovery. There is also an option to add games from [Venture](https://github.com/Villagers654/Venture) to the Oculus Games category (this feature has not yet been tested on the Pico 4). |
+| Third-party games | Adds custom Steam IDs to Streamer's game discovery. There is also an option to add games from [Venture](https://github.com/Villagers654/Venture) to the Oculus Games category (this feature has not yet been tested on the Pico 4).  |
 | Game launch presets | Allows you to set custom launch parameters, such as FPS, quality, FOV tangent, VDXR render resolution, and sharpening. These settings are applied before the game launches. Once the game is closed, the settings revert to their original values ​​as configured in VD. |
 | Unlimited bitrate | Allows you to set your own bitrate limit for Wi-Fi or USB connections, though there is no guarantee that the stream will work correctly. This is an experimental feature. |
 | Remap Buttons | Key binding modifications for SteamVR and OpenXR games at the streamer level. |
@@ -44,6 +44,7 @@ The desktop app writes startup events, library scan warnings, and exception deta
 | Anti-drift stick | Handle stick presses when a finger is resting on the stick, by leveraging the ability to detect finger contact with the stick. A partial solution. |
 | Configuring foveated streaming | The ability to adjust the sharpness percentage for a given area, as well as the boundaries of the central zone and the curve that determines the reduction in sampling density. |
 | Fix Dongle Wi-Fi | Add the ability to connect to a PC via a USB or PCIe Wi-Fi adapter. |
+| Custom VR environments | Upload your own VR environments |
 
 ## Screenshots
 
