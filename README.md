@@ -32,6 +32,9 @@ Run **Install Streamer Helper.exe** to enable VD Unlock's Streamer features, inc
 
 Launch the Virtual Desktop Unlock program; you can then close the window, as the application will remain in the system tray. For its features to be available, the program must be running in the background; to ensure this, select the option in the application settings to have it launch automatically when Windows starts.
 
+> [!WARNING]
+> This add-on only works with a current, licensed version of Virtual Desktop.
+
 ## Troubleshooting
 
 The desktop app writes startup events, library scan warnings, and exception details to `%LOCALAPPDATA%\Virtual Desktop Unlock\Logs\app.log`. It keeps the previous log as `app.log.1`. Streamer helper and installer errors are recorded in `%ProgramData%\Virtual Desktop\LibraryOverrides.log` and `%ProgramData%\Virtual Desktop Unlock\installer.log`.
