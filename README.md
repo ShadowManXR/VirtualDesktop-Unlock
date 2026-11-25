@@ -15,7 +15,7 @@ An unofficial program for extending Virtual Desktop Streaming. Modifications are
 | Feature | Description |
 |---|---|
 | Third-party games | Adds custom Steam IDs to Streamer's game discovery. There is also an option to add games from [Venture](https://github.com/Villagers654/Venture) to the Oculus Games category (this feature has not yet been tested on the Pico 4). Add a VR `.exe` with an optional PNG or JPEG cover. Without a cover, a title card uses the executable's icon and program name. |
-| Game launch presets | Allows you to set custom launch parameters, such as FPS, quality, FOV tangent, VDXR render resolution, and sharpening. These settings are applied before the game launches. Once the game is closed, the settings revert to their original values ​​as configured in VD. |
+| Game launch presets | Allows you to set custom launch parameters, such as FPS, quality, FOV tangent, VDXR render resolution, sharpening and gamma. These settings are applied before the game launches. Once the game is closed, the settings revert to their original values ​​as configured in VD. |
 | Unlimited bitrate | Allows you to set your own bitrate limit for Wi-Fi or USB connections, though there is no guarantee that the stream will work correctly. This is an experimental feature. |
 | Remap Buttons | Key binding modifications for SteamVR and OpenXR games at the streamer level. |
 | Monitoring | View FPS, measured video payload bitrate, battery, and latency graphs with hover readings and averages. Samples are collected every second only while Monitoring is open, with a rolling two-hour history and four time ranges.|
