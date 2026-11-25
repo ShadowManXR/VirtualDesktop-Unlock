@@ -46,8 +46,6 @@ The desktop app writes startup events, library scan warnings, and exception deta
 | Fix Dongle Wi-Fi | Add the ability to connect to a PC via a USB or PCIe Wi-Fi adapter. |
 | Custom VR environments | Upload your own VR environments |
 
-Version 0.3.6-alpha adds an optional per-game **Gamma** launch override from **0.50 to 2.00**, with **1.00** neutral. Update the Streamer Helper to 0.3.6 to apply gamma before launch and restore the previous value after exit. Manual gamma changes made while a game is running are preserved.
-
 ## Screenshots
 
 These desktop screenshots were captured in v0.3.4.
