@@ -1,4 +1,6 @@
 {
+  "Gamma": "伽马",
+  "Override gamma": "覆盖伽马",
   "Show logs": "显示日志",
   "Could not open logs": "无法打开日志",
   "Latency (ms)": "延迟 (ms)",

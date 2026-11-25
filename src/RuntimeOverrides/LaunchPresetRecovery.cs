@@ -18,6 +18,8 @@ namespace VirtualDesktop.LibraryOverrides
         public float? OriginalRender,AppliedRender,OriginalSharpening,AppliedSharpening;
         public bool? OriginalUseSharpening,AppliedUseSharpening;
         public bool PreserveRender,PreserveSharpening,PreserveUseSharpening;
+        public float? OriginalGamma,AppliedGamma;
+        public bool PreserveGamma;
         public DateTime? QuietSinceUtc;
     }
 
@@ -32,10 +34,11 @@ namespace VirtualDesktop.LibraryOverrides
         public LaunchPresetRecovery(string path,Action<string> logger){this.path=path;log=logger;Load();}
         public IList<PresetRecoverySession> Sessions {get{return sessions.AsReadOnly();}}
         public PresetRecoverySession Active(uint id){return sessions.FindLast(s=>s.AppId==id&&!s.Ended);}
-        public PresetRecoverySession Begin(uint id,string directory,int originalFps,int originalQuality,int appliedFps,int appliedQuality,DateTime now,float? originalHorizontal=null,float? originalVertical=null,float? appliedHorizontal=null,float? appliedVertical=null,float? originalRender=null,float? appliedRender=null,bool? originalUseSharpening=null,bool? appliedUseSharpening=null,float? originalSharpening=null,float? appliedSharpening=null)
+        public PresetRecoverySession Begin(uint id,string directory,int originalFps,int originalQuality,int appliedFps,int appliedQuality,DateTime now,float? originalHorizontal=null,float? originalVertical=null,float? appliedHorizontal=null,float? appliedVertical=null,float? originalRender=null,float? appliedRender=null,bool? originalUseSharpening=null,bool? appliedUseSharpening=null,float? originalSharpening=null,float? appliedSharpening=null,float? originalGamma=null,float? appliedGamma=null)
         {
             var session=new PresetRecoverySession{AppId=id,Directory=directory,OriginalFps=originalFps,OriginalQuality=originalQuality,AppliedFps=appliedFps,AppliedQuality=appliedQuality,StartedUtc=now,OriginalHorizontal=originalHorizontal,OriginalVertical=originalVertical,AppliedHorizontal=appliedHorizontal,AppliedVertical=appliedVertical};
             session.OriginalRender=originalRender;session.AppliedRender=appliedRender;session.OriginalUseSharpening=originalUseSharpening;session.AppliedUseSharpening=appliedUseSharpening;session.OriginalSharpening=originalSharpening;session.AppliedSharpening=appliedSharpening;
+            session.OriginalGamma=originalGamma;session.AppliedGamma=appliedGamma;
             Validate(session);if(sessions.Count>=64)throw new InvalidOperationException("Too many pending game recoveries.");
             sessions.Add(session);try{Save();}catch{sessions.Remove(session);throw;}return session;
         }
@@ -57,12 +60,17 @@ namespace VirtualDesktop.LibraryOverrides
             }
             if(changed)Save();
         }
-        public void RestoreReady(Func<int[]> current,Action<int> setFps,Action<int> setQuality,Func<float[]> currentFov=null,Action<float> setHorizontal=null,Action<float> setVertical=null,Func<float[]> currentAdvanced=null,Func<bool> currentUseSharpening=null,Action<float> setRender=null,Action<float> setSharpening=null,Action<bool> setUseSharpening=null)
+        public void RestoreReady(Func<int[]> current,Action<int> setFps,Action<int> setQuality,Func<float[]> currentFov=null,Action<float> setHorizontal=null,Action<float> setVertical=null,Func<float[]> currentAdvanced=null,Func<bool> currentUseSharpening=null,Action<float> setRender=null,Action<float> setSharpening=null,Action<bool> setUseSharpening=null,Func<float> currentGamma=null,Action<float> setGamma=null)
         {
             // A disconnected headset makes current()/setters throw. Keep the
             // record and retry on reconnect rather than losing remote recovery.
             while(sessions.Count>0&&sessions[sessions.Count-1].Ended){
                 var session=sessions[sessions.Count-1];var selected=current();
+                if(session.AppliedGamma.HasValue){
+                    if(currentGamma==null||setGamma==null)throw new InvalidOperationException("Gamma recovery requires the updated helper.");
+                    if(!session.PreserveGamma&&Near(currentGamma(),session.AppliedGamma.Value))setGamma(session.OriginalGamma.Value);
+                    else foreach(var older in sessions)older.PreserveGamma=true;
+                }
                 bool fps=!session.PreserveFps&&selected[0]==session.AppliedFps,quality=!session.PreserveQuality&&selected[1]==session.AppliedQuality;
                 if(session.AppliedHorizontal.HasValue||session.AppliedVertical.HasValue){
                     if(currentFov==null||setHorizontal==null||setVertical==null)throw new InvalidOperationException("FOV recovery requires the updated helper.");
@@ -104,7 +112,8 @@ namespace VirtualDesktop.LibraryOverrides
         private static bool Axis(float? original,float? applied){return original.HasValue==applied.HasValue&&(!original.HasValue||(VirtualDesktop.Unlock.LaunchPresetConfiguration.ValidFov(original.Value)&&VirtualDesktop.Unlock.LaunchPresetConfiguration.ValidFov(applied.Value)));}
         private static bool Advanced(PresetRecoverySession s)
         {
-            return s.OriginalRender.HasValue==s.AppliedRender.HasValue&&(!s.AppliedRender.HasValue||(VirtualDesktop.Unlock.LaunchPresetConfiguration.ValidRender(s.OriginalRender.Value)&&VirtualDesktop.Unlock.LaunchPresetConfiguration.ValidRender(s.AppliedRender.Value)))
+            return s.OriginalGamma.HasValue==s.AppliedGamma.HasValue&&(!s.AppliedGamma.HasValue||(VirtualDesktop.Unlock.LaunchPresetConfiguration.ValidGamma(s.OriginalGamma.Value)&&VirtualDesktop.Unlock.LaunchPresetConfiguration.ValidGamma(s.AppliedGamma.Value)))
+                &&s.OriginalRender.HasValue==s.AppliedRender.HasValue&&(!s.AppliedRender.HasValue||(VirtualDesktop.Unlock.LaunchPresetConfiguration.ValidRender(s.OriginalRender.Value)&&VirtualDesktop.Unlock.LaunchPresetConfiguration.ValidRender(s.AppliedRender.Value)))
                 &&s.OriginalSharpening.HasValue==s.AppliedSharpening.HasValue&&s.OriginalUseSharpening.HasValue==s.AppliedUseSharpening.HasValue&&s.AppliedSharpening.HasValue==s.AppliedUseSharpening.HasValue
                 &&(!s.AppliedSharpening.HasValue||(VirtualDesktop.Unlock.LaunchPresetConfiguration.ValidSharpening(s.OriginalSharpening.Value)&&VirtualDesktop.Unlock.LaunchPresetConfiguration.ValidSharpening(s.AppliedSharpening.Value)));
         }
@@ -117,13 +126,14 @@ namespace VirtualDesktop.LibraryOverrides
         {
             if(!File.Exists(path))return;
             using(var r=XmlReader.Create(path,new XmlReaderSettings{DtdProcessing=DtdProcessing.Prohibit,XmlResolver=null,MaxCharactersInDocument=65536})){
-                r.MoveToContent();if(r.Name!="LaunchPresetRecovery"||(r.GetAttribute("version")!="1"&&r.GetAttribute("version")!="2"&&r.GetAttribute("version")!="3"))throw new InvalidDataException("Unsupported recovery format.");
+                r.MoveToContent();if(r.Name!="LaunchPresetRecovery"||(r.GetAttribute("version")!="1"&&r.GetAttribute("version")!="2"&&r.GetAttribute("version")!="3"&&r.GetAttribute("version")!="4"))throw new InvalidDataException("Unsupported recovery format.");
                 while(r.Read())if(r.NodeType==XmlNodeType.Element){
                     if(r.Name!="Session"||r.Depth!=1||sessions.Count>=64)throw new InvalidDataException("Invalid recovery session.");
                     var s=new PresetRecoverySession{AppId=UInt32.Parse(r.GetAttribute("appId"),CultureInfo.InvariantCulture),Directory=r.GetAttribute("directory"),OriginalFps=Int(r,"originalFps"),OriginalQuality=Int(r,"originalQuality"),AppliedFps=Int(r,"appliedFps"),AppliedQuality=Int(r,"appliedQuality"),StartedUtc=DateTime.Parse(r.GetAttribute("startedUtc"),CultureInfo.InvariantCulture,DateTimeStyles.RoundtripKind),SeenRunning=Boolean.Parse(r.GetAttribute("seenRunning")),Ended=Boolean.Parse(r.GetAttribute("ended"))};
                     s.PreserveFps=r.GetAttribute("preserveFps")=="True";s.PreserveQuality=r.GetAttribute("preserveQuality")=="True";
                     s.OriginalHorizontal=Float(r,"originalHorizontal");s.OriginalVertical=Float(r,"originalVertical");s.AppliedHorizontal=Float(r,"appliedHorizontal");s.AppliedVertical=Float(r,"appliedVertical");s.PreserveHorizontal=r.GetAttribute("preserveHorizontal")=="True";s.PreserveVertical=r.GetAttribute("preserveVertical")=="True";
                     s.OriginalRender=Float(r,"originalRender");s.AppliedRender=Float(r,"appliedRender");s.OriginalSharpening=Float(r,"originalSharpening");s.AppliedSharpening=Float(r,"appliedSharpening");
+                    s.OriginalGamma=Float(r,"originalGamma");s.AppliedGamma=Float(r,"appliedGamma");s.PreserveGamma=r.GetAttribute("preserveGamma")=="True";
                     s.OriginalUseSharpening=Bool(r,"originalUseSharpening");s.AppliedUseSharpening=Bool(r,"appliedUseSharpening");s.PreserveRender=r.GetAttribute("preserveRender")=="True";s.PreserveSharpening=r.GetAttribute("preserveSharpening")=="True";s.PreserveUseSharpening=r.GetAttribute("preserveUseSharpening")=="True";
                     Validate(s);sessions.Add(s);
                 }
@@ -140,10 +150,11 @@ namespace VirtualDesktop.LibraryOverrides
             string temp=path+"."+Guid.NewGuid().ToString("N")+".tmp";
             try{
                 using(var w=XmlWriter.Create(temp,new XmlWriterSettings{Indent=true})){
-                    bool fov=false,advanced=false;foreach(var s in sessions){if(s.AppliedHorizontal.HasValue||s.AppliedVertical.HasValue)fov=true;if(s.AppliedRender.HasValue||s.AppliedSharpening.HasValue)advanced=true;}
-                    w.WriteStartElement("LaunchPresetRecovery");Attr(w,"version",advanced?"3":fov?"2":"1");
+                    bool fov=false,advanced=false,gamma=false;foreach(var s in sessions){if(s.AppliedHorizontal.HasValue||s.AppliedVertical.HasValue)fov=true;if(s.AppliedRender.HasValue||s.AppliedSharpening.HasValue)advanced=true;if(s.AppliedGamma.HasValue)gamma=true;}
+                    w.WriteStartElement("LaunchPresetRecovery");Attr(w,"version",gamma?"4":advanced?"3":fov?"2":"1");
                     foreach(var s in sessions){w.WriteStartElement("Session");Attr(w,"appId",s.AppId);Attr(w,"directory",s.Directory);Attr(w,"originalFps",s.OriginalFps);Attr(w,"originalQuality",s.OriginalQuality);Attr(w,"appliedFps",s.AppliedFps);Attr(w,"appliedQuality",s.AppliedQuality);Attr(w,"startedUtc",s.StartedUtc.ToString("O",CultureInfo.InvariantCulture));Attr(w,"seenRunning",s.SeenRunning);Attr(w,"ended",s.Ended);Attr(w,"preserveFps",s.PreserveFps);Attr(w,"preserveQuality",s.PreserveQuality);FloatAttr(w,"originalHorizontal",s.OriginalHorizontal);FloatAttr(w,"originalVertical",s.OriginalVertical);FloatAttr(w,"appliedHorizontal",s.AppliedHorizontal);FloatAttr(w,"appliedVertical",s.AppliedVertical);Attr(w,"preserveHorizontal",s.PreserveHorizontal);Attr(w,"preserveVertical",s.PreserveVertical);
                         FloatAttr(w,"originalRender",s.OriginalRender);FloatAttr(w,"appliedRender",s.AppliedRender);FloatAttr(w,"originalSharpening",s.OriginalSharpening);FloatAttr(w,"appliedSharpening",s.AppliedSharpening);
+                        FloatAttr(w,"originalGamma",s.OriginalGamma);FloatAttr(w,"appliedGamma",s.AppliedGamma);Attr(w,"preserveGamma",s.PreserveGamma);
                         if(s.OriginalUseSharpening.HasValue)Attr(w,"originalUseSharpening",s.OriginalUseSharpening.Value);if(s.AppliedUseSharpening.HasValue)Attr(w,"appliedUseSharpening",s.AppliedUseSharpening.Value);
                         Attr(w,"preserveRender",s.PreserveRender);Attr(w,"preserveSharpening",s.PreserveSharpening);Attr(w,"preserveUseSharpening",s.PreserveUseSharpening);w.WriteEndElement();}w.WriteEndElement();
                 }

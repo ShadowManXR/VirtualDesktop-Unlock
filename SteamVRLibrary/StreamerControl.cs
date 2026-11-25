@@ -50,7 +50,7 @@ public sealed class StreamerControl : IStreamerControl
                 string executable = StreamerLocation.FindInstalledHelperTarget();
                 if (!HasIntegration(executable)) return false;
                 var installed = AssemblyName.GetAssemblyName(Path.Combine(Path.GetDirectoryName(executable)!, "VirtualDesktop.LibraryOverrides.dll"));
-                return installed.Version < new Version(0, 3, 4, 1);
+                return installed.Version < new Version(0, 3, 6, 0);
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or BadImageFormatException or ArgumentException)
             { return false; }

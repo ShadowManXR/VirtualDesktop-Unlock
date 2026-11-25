@@ -171,14 +171,15 @@ namespace VirtualDesktop.LibraryOverrides
                     var user=User();session=recovery.Begin(id,directory,Convert.ToInt32(Property(user,"VRFramerate")),Convert.ToInt32(Property(user,"VRGraphicsQuality")),preset.Fps,preset.Quality,DateTime.UtcNow,preset.HorizontalFov.HasValue?(float?)Convert.ToSingle(Property(StreamerSettings(),"HorizontalFovTangent")):null,preset.VerticalFov.HasValue?(float?)Convert.ToSingle(Property(StreamerSettings(),"VerticalFovTangent")):null,preset.HorizontalFov,preset.VerticalFov,
                         originalRender:preset.RenderResolution.HasValue?(float?)Convert.ToSingle(Property(StreamerSettings(),"RenderResolutionOverride")):null,appliedRender:preset.RenderResolution,
                         originalUseSharpening:preset.UseSharpening.HasValue?(bool?)Convert.ToBoolean(Property(StreamerSettings(),"UseSharpening")):null,appliedUseSharpening:preset.UseSharpening,
-                        originalSharpening:preset.Sharpening.HasValue?(float?)Convert.ToSingle(Property(StreamerSettings(),"Sharpening")):null,appliedSharpening:preset.Sharpening);
+                        originalSharpening:preset.Sharpening.HasValue?(float?)Convert.ToSingle(Property(StreamerSettings(),"Sharpening")):null,appliedSharpening:preset.Sharpening,
+                        originalGamma:preset.Gamma.HasValue?(float?)Convert.ToSingle(Property(user,"Gamma")):null,appliedGamma:preset.Gamma);
                     ApplyPreset(preset);
                 }).ConfigureAwait(false);
                 // VD exposes no client acknowledgement here. Allow transport/UI to
                 // settle, then verify the selection has not changed before launch.
                 await Task.Delay(1000).ConfigureAwait(false);
                 await OnDispatcher(delegate{CheckPreset(preset);}).ConfigureAwait(false);
-                log("Launch preset releasing Steam "+idField.GetValue(game)+"; fps="+preset.Fps+"; quality="+preset.Quality+"; horizontalFov="+FovText(preset.HorizontalFov)+"; verticalFov="+FovText(preset.VerticalFov)+"; renderResolution="+FovText(preset.RenderResolution)+"; useSharpening="+(preset.UseSharpening.HasValue?preset.UseSharpening.Value.ToString():"unchanged")+"; sharpening="+FovText(preset.Sharpening)+"; utc="+DateTime.UtcNow.ToString("O"));
+                log("Launch preset releasing Steam "+idField.GetValue(game)+"; fps="+preset.Fps+"; quality="+preset.Quality+"; horizontalFov="+FovText(preset.HorizontalFov)+"; verticalFov="+FovText(preset.VerticalFov)+"; renderResolution="+FovText(preset.RenderResolution)+"; useSharpening="+(preset.UseSharpening.HasValue?preset.UseSharpening.Value.ToString():"unchanged")+"; sharpening="+FovText(preset.Sharpening)+"; gamma="+FovText(preset.Gamma)+"; utc="+DateTime.UtcNow.ToString("O"));
                 await original(game).ConfigureAwait(false);
                 try{await ObserveRecovery().ConfigureAwait(false);}catch(Exception observation){RecoveryError(observation);}
               }catch(Exception e){failure=e;}
@@ -204,7 +205,8 @@ namespace VirtualDesktop.LibraryOverrides
         {
             recovery.RestoreReady(delegate{var user=User();return new[]{Convert.ToInt32(Property(user,"VRFramerate")),Convert.ToInt32(Property(user,"VRGraphicsQuality"))};},delegate(int value){Set(User(),"VRFramerate",value);},delegate(int value){Set(User(),"VRGraphicsQuality",value);},delegate{var settings=StreamerSettings();return new[]{Convert.ToSingle(Property(settings,"HorizontalFovTangent")),Convert.ToSingle(Property(settings,"VerticalFovTangent"))};},delegate(float value){Set(StreamerSettings(),"HorizontalFovTangent",value);},delegate(float value){Set(StreamerSettings(),"VerticalFovTangent",value);},
                 delegate{var settings=StreamerSettings();return new[]{Convert.ToSingle(Property(settings,"RenderResolutionOverride")),Convert.ToSingle(Property(settings,"Sharpening"))};},delegate{return Convert.ToBoolean(Property(StreamerSettings(),"UseSharpening"));},
-                delegate(float value){Set(StreamerSettings(),"RenderResolutionOverride",value);},delegate(float value){Set(StreamerSettings(),"Sharpening",value);},delegate(bool value){Set(StreamerSettings(),"UseSharpening",value);});
+                delegate(float value){Set(StreamerSettings(),"RenderResolutionOverride",value);},delegate(float value){Set(StreamerSettings(),"Sharpening",value);},delegate(bool value){Set(StreamerSettings(),"UseSharpening",value);},
+                delegate{return Convert.ToSingle(Property(User(),"Gamma"));},delegate(float value){Set(User(),"Gamma",value);});
         }
         private static void RecoveryError(Exception error)
         {
@@ -240,12 +242,14 @@ namespace VirtualDesktop.LibraryOverrides
             if(preset.RenderResolution.HasValue)Set(StreamerSettings(),"RenderResolutionOverride",preset.RenderResolution.Value);
             if(preset.Sharpening.HasValue)Set(StreamerSettings(),"Sharpening",preset.Sharpening.Value);
             if(preset.UseSharpening.HasValue)Set(StreamerSettings(),"UseSharpening",preset.UseSharpening.Value);
-            log("Launch preset applied before game launch; fps="+preset.Fps+"; quality="+preset.Quality+"; horizontalFov="+FovText(preset.HorizontalFov)+"; verticalFov="+FovText(preset.VerticalFov)+"; renderResolution="+FovText(preset.RenderResolution)+"; useSharpening="+(preset.UseSharpening.HasValue?preset.UseSharpening.Value.ToString():"unchanged")+"; sharpening="+FovText(preset.Sharpening)+"; utc="+DateTime.UtcNow.ToString("O"));
+            if(preset.Gamma.HasValue)Set(user,"Gamma",preset.Gamma.Value);
+            log("Launch preset applied before game launch; fps="+preset.Fps+"; quality="+preset.Quality+"; horizontalFov="+FovText(preset.HorizontalFov)+"; verticalFov="+FovText(preset.VerticalFov)+"; renderResolution="+FovText(preset.RenderResolution)+"; useSharpening="+(preset.UseSharpening.HasValue?preset.UseSharpening.Value.ToString():"unchanged")+"; sharpening="+FovText(preset.Sharpening)+"; gamma="+FovText(preset.Gamma)+"; utc="+DateTime.UtcNow.ToString("O"));
         }
         private static void CheckPreset(LaunchPreset preset)
         {
             CheckAdvanced(preset);
             var user=User();if(Convert.ToInt32(Property(user,"VRFramerate"))!=preset.Fps || Convert.ToInt32(Property(user,"VRGraphicsQuality"))!=preset.Quality)throw new InvalidOperationException("VD preset changed during launch preparation; try again.");
+            if(preset.Gamma.HasValue&&!LaunchPresetRecovery.Near(Convert.ToSingle(Property(user,"Gamma")),preset.Gamma.Value))throw new InvalidOperationException("Gamma changed during launch preparation; try again.");
             if((preset.HorizontalFov.HasValue&&!LaunchPresetRecovery.Near(Convert.ToSingle(Property(StreamerSettings(),"HorizontalFovTangent")),preset.HorizontalFov.Value))||(preset.VerticalFov.HasValue&&!LaunchPresetRecovery.Near(Convert.ToSingle(Property(StreamerSettings(),"VerticalFovTangent")),preset.VerticalFov.Value)))throw new InvalidOperationException("FOV tangent changed during launch preparation; try again.");
         }
         private static void CheckAdvanced(LaunchPreset preset)

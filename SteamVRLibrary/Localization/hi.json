@@ -1,4 +1,6 @@
 {
+  "Gamma": "गामा",
+  "Override gamma": "गामा बदलें",
   "Show logs": "लॉग दिखाएँ",
   "Could not open logs": "लॉग नहीं खोले जा सके",
   "Latency (ms)": "विलंब (ms)",

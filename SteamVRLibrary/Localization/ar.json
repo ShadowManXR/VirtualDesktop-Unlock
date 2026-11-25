@@ -1,4 +1,6 @@
 {
+  "Gamma": "جاما",
+  "Override gamma": "تجاوز جاما",
   "Show logs": "عرض السجلات",
   "Could not open logs": "تعذر فتح السجلات",
   "Latency (ms)": "زمن التأخير (مللي ثانية)",

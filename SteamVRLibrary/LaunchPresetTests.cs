@@ -61,5 +61,29 @@ internal static class LaunchPresetTests
         foreach(string value in new[]{"NaN","Infinity","0,8","0.3","1.1"}){
             File.WriteAllText(path,"<LaunchPresets version=\"2\"><Game platform=\"Steam\" appId=\"1\" fps=\"90\" quality=\"2\" horizontalFov=\""+value+"\"/></LaunchPresets>");bool rejected=false;try{LaunchPresetConfiguration.Read(path);}catch(InvalidDataException){rejected=true;}check(rejected,"Invalid FOV value rejected: "+value);
         }
+        var gammaConfig=new LaunchPresetConfiguration();gammaConfig.Games[2981220]=new LaunchPreset(90,2);gammaConfig.Games[123]=new LaunchPreset(96,1);gammaConfig.Write(path);
+        using(var gammaForm=new LaunchPresetsForm(new Game("2981220","Forefront",""),new LaunchPresetStore(path))){
+            gammaForm.ShowInTaskbar=false;gammaForm.StartPosition=FormStartPosition.Manual;gammaForm.Location=new Point(-20000,-20000);gammaForm.Show();Application.DoEvents();
+            var controls=Children(gammaForm).ToArray();var gammaOverride=controls.OfType<CheckBox>().Single(c=>c.AccessibleName=="Enable gamma override");var gamma=controls.OfType<TrackBar>().Single(c=>c.AccessibleName=="Gamma");
+            check(!gammaOverride.Checked&&!gamma.Enabled&&gamma.Value==50,"Gamma override starts disabled at neutral 1.00 for existing presets");
+            gammaOverride.Checked=true;gamma.Value=75;check(gamma.Enabled,"Gamma override enables the per-game slider");
+            controls.OfType<Panel>().Single(c=>c.AutoScroll).ScrollControlIntoView(gamma);Application.DoEvents();
+            using(var bitmap=new Bitmap(gammaForm.Width,gammaForm.Height)){gammaForm.DrawToBitmap(bitmap,new Rectangle(Point.Empty,gammaForm.Size));bitmap.Save(Path.Combine(root,"launch-presets-gamma.png"));}
+            controls.OfType<Button>().Single(c=>c.AccessibleName=="Save launch preset").PerformClick();
+        }
+        var gammaSaved=LaunchPresetConfiguration.Read(path);
+        check(gammaSaved.Games[2981220].Gamma==1.25f&&!gammaSaved.Games[123].Gamma.HasValue&&File.ReadAllText(path).Contains("version=\"4\""),"Gamma saves in format 4 without modifying other games");
+        using(var gammaForm=new LaunchPresetsForm(new Game("2981220","Forefront",""),new LaunchPresetStore(path))){
+            var controls=Children(gammaForm).ToArray();var gammaOverride=controls.OfType<CheckBox>().Single(c=>c.AccessibleName=="Enable gamma override");
+            check(gammaOverride.Checked&&controls.OfType<TrackBar>().Single(c=>c.AccessibleName=="Gamma").Value==75,"Saved gamma reloads into the editor");
+            gammaOverride.Checked=false;check(!controls.OfType<TrackBar>().Single(c=>c.AccessibleName=="Gamma").Enabled,"Clearing the gamma override disables its slider");
+            gammaForm.ShowInTaskbar=false;gammaForm.StartPosition=FormStartPosition.Manual;gammaForm.Location=new Point(-20000,-20000);gammaForm.Show();Application.DoEvents();
+            controls.OfType<Button>().Single(c=>c.AccessibleName=="Save launch preset").PerformClick();
+        }
+        check(!LaunchPresetConfiguration.Read(path).Games[2981220].Gamma.HasValue&&File.ReadAllText(path).Contains("version=\"1\""),"Removing gamma returns to the basic format and leaves global gamma unchanged");
+        foreach(float gamma in new[]{0.5f,1f,2f}){gammaConfig.Games[2981220].Gamma=gamma;gammaConfig.Write(path);check(LaunchPresetConfiguration.Read(path).Games[2981220].Gamma==gamma,"Gamma boundary round trip: "+gamma);}
+        foreach(string value in new[]{"NaN","Infinity","-Infinity","0","0.49","2.01","1,25"}){
+            File.WriteAllText(path,"<LaunchPresets version=\"4\"><Game platform=\"Steam\" appId=\"1\" fps=\"90\" quality=\"2\" gamma=\""+value+"\"/></LaunchPresets>");bool rejected=false;try{LaunchPresetConfiguration.Read(path);}catch(InvalidDataException){rejected=true;}check(rejected,"Invalid gamma rejected: "+value);
+        }
     }
 }

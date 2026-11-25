@@ -1,4 +1,6 @@
 {
+  "Gamma": "Gamma",
+  "Override gamma": "Gamma überschreiben",
   "Show logs": "Protokolle anzeigen",
   "Could not open logs": "Protokolle konnten nicht geöffnet werden",
   "Latency (ms)": "Latenz (ms)",

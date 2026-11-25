@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.6-alpha — 2026-11-25
+
+- Add an optional per-game gamma launch override (0.50–2.00, neutral 1.00), applied before launch and restored after exit while preserving manual changes.
+
 ## 0.3.5-alpha — 2026-11-25
 
 - Add padding inside the search field and use the English placeholder "games or Steam app ID…".

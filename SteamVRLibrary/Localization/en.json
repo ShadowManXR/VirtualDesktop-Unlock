@@ -1,4 +1,6 @@
 {
+  "Gamma": "Gamma",
+  "Override gamma": "Override gamma",
   "Show logs": "Show logs",
   "Could not open logs": "Could not open logs",
   "Latency (ms)": "Latency (ms)",

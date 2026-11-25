@@ -1,4 +1,4 @@
-# Virtual Desktop Unlock 0.3.5-alpha validation guide
+# Virtual Desktop Unlock 0.3.6-alpha validation guide
 
 This build adds experimental VDXR render resolution and Additional sharpening launch presets for the verified Virtual Desktop Streamer 1.34.25.0 x64 / Quest 3 setup. The user confirmed that the Forefront preset works at 70% horizontal / 70% vertical with the 0.2.1 helper. In 0.2.2, monitored Forefront tests also confirmed Additional sharpening and 50% VDXR render-scale application and exit recovery; the user reported everything working. Other games and runtimes still need individual verification.
 
@@ -8,6 +8,10 @@ This build adds experimental VDXR render resolution and Additional sharpening la
 2. Extract the ZIP into a new writable folder. Copy your previous app's `Data` folder into it to retain library selections. Shared launch presets are already stored in `%APPDATA%\Virtual Desktop Unlock`.
 3. Run **Install Streamer Helper.exe**, approve the Windows prompt, and confirm the detected Streamer installation. Choose **No** to browse to a different installation. Setup restarts Streamer and can upgrade a helper whose files match its existing installation record. To remove the helper from a custom location, run the setup executable with `--uninstall`.
 4. Open **Virtual Desktop Unlock.exe** from this build and reconnect VD to the PC. The app requires .NET Desktop Runtime 10. The advanced launch presets require helper 0.2.2 or later.
+
+## Gamma launch presets (0.3.6-alpha)
+
+Update the integration to helper 0.3.6. Enable **Use preset** and **Override gamma** for a selected game. Gamma defaults to neutral **1.00**, supports **0.50–2.00** in **0.01** steps, and is left unchanged when its override is disabled. Save, reopen the editor, and confirm the value is retained. Launch from VD and compare the gamma selection in its Streaming settings. Exit the game and verify the previous gamma returns. Repeat with a manual gamma change during the game, a failed launch, overlapping games, and a disconnect/reconnect; recovery must preserve manual values and retry pending restoration after reconnect.
 
 ## Monitoring
 

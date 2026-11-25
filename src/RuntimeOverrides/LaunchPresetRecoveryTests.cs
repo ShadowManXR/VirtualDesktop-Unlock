@@ -81,6 +81,26 @@ class LaunchPresetRecoveryTests
         bool unavailable=false;try{Restore(r);}catch(InvalidOperationException){unavailable=true;}
         Check(unavailable&&r.Sessions.Count==1&&File.Exists(path),"Missing advanced callbacks retain recovery for an updated connected helper");restoreAdvanced();
         Check(render==1f&&r.Sessions.Count==0,"Pending advanced recovery resumes with complete callbacks");
+        float gamma=1.25f;
+        Action restoreGamma=delegate{r.RestoreReady(Current,delegate(int v){fps=v;},delegate(int v){quality=v;},currentGamma:delegate{return gamma;},setGamma:delegate(float v){gamma=v;});};
+        session=r.Begin(1,a,90,2,144,0,now,originalGamma:1f,appliedGamma:1.25f);fps=144;quality=0;r.Fail(session);
+        Check(File.ReadAllText(path).Contains("version=\"4\""),"Gamma recovery uses format 4");r=Recovery(path);restoreGamma();
+        Check(gamma==1f&&r.Sessions.Count==0,"Gamma baseline survives reload and restores on exit");
+        session=r.Begin(1,a,90,2,144,0,now,originalGamma:1f,appliedGamma:1.25f);fps=144;quality=0;gamma=1.4f;r.Fail(session);restoreGamma();
+        Check(gamma==1.4f,"Manual gamma changes survive recovery");
+        first=r.Begin(1,a,90,2,144,0,now,originalGamma:1f,appliedGamma:1.2f);second=r.Begin(2,b,144,0,120,2,now,originalGamma:1.2f,appliedGamma:1.5f);
+        fps=120;quality=2;gamma=1.5f;r.Fail(first);r.Fail(second);r=Recovery(path);restoreGamma();
+        Check(gamma==1f&&r.Sessions.Count==0,"Overlapping game exits unwind gamma to the original baseline");
+        first=r.Begin(1,a,90,2,144,0,now,originalGamma:1f,appliedGamma:1.2f);second=r.Begin(2,b,144,0,120,2,now,originalGamma:1.2f,appliedGamma:1.5f);
+        fps=120;quality=2;gamma=1.2f;r.Fail(first);r.Fail(second);r=Recovery(path);restoreGamma();
+        Check(gamma==1.2f,"Manual gamma matching an older preset survives stacked recovery");
+        session=r.Begin(1,a,90,2,144,0,now,originalGamma:1f,appliedGamma:1.25f);fps=144;quality=2;gamma=1f;r.Fail(session);restoreGamma();
+        Check(gamma==1f&&r.Sessions.Count==0,"A failed launch preserves gamma when application never reached the gamma setter");
+        session=r.Begin(1,a,90,2,144,0,now,originalGamma:1f,appliedGamma:1.25f);fps=144;quality=0;gamma=1.25f;r.Fail(session);
+        unavailable=false;try{Restore(r);}catch(InvalidOperationException){unavailable=true;}
+        Check(unavailable&&r.Sessions.Count==1,"Gamma recovery remains pending until its callbacks are available");restoreGamma();
+        bool invalidGamma=false;try{r.Begin(1,a,90,2,144,0,now,originalGamma:1f,appliedGamma:Single.NaN);}catch(InvalidDataException){invalidGamma=true;}
+        Check(invalidGamma&&r.Sessions.Count==0,"Invalid gamma recovery is rejected before mutation");
         Console.WriteLine("Recovery checks passed: "+checks);return 0;
     }catch(Exception e){Console.WriteLine(e);return 1;}}
 }

@@ -1,4 +1,6 @@
 {
+  "Gamma": "Gamma",
+  "Override gamma": "Remplacer le gamma",
   "Show logs": "Afficher les journaux",
   "Could not open logs": "Impossible d’ouvrir les journaux",
   "Latency (ms)": "Latence (ms)",

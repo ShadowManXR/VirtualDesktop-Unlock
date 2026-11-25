@@ -1,4 +1,6 @@
 {
+  "Gamma": "Гамма",
+  "Override gamma": "Переопределить гамму",
   "Show logs": "Показать логи",
   "Could not open logs": "Не удалось открыть логи",
   "Latency (ms)": "Задержка (мс)",

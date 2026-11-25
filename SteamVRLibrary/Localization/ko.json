@@ -1,4 +1,6 @@
 {
+  "Gamma": "감마",
+  "Override gamma": "감마 재정의",
   "Show logs": "로그 보기",
   "Could not open logs": "로그를 열 수 없습니다",
   "Latency (ms)": "지연 시간 (ms)",

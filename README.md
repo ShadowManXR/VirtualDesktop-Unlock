@@ -2,7 +2,7 @@
 
 # Virtual Desktop Unlock
 
-**v0.3.5-alpha** · Windows x64 · Unofficial · MIT
+**v0.3.6-alpha** · Windows x64 · Unofficial · MIT
 
 An unofficial program for extending Virtual Desktop Streaming. Modifications are applied only to the back-end server component installed on Windows; the client requires no modification. Add custom Steam games, including games that use third-party VR mods, to Virtual Desktop's actual headset Games tab using the optional runtime helper. The desktop companion app organizes your installed Steam games, saves selections for the helper, and provides optional headset-specific bitrate ceilings. There is also an option to set application launch presets, such as for FPS, quality, and FOV tangent.
 
@@ -45,6 +45,8 @@ The desktop app writes startup events, library scan warnings, and exception deta
 | Configuring foveated streaming | The ability to adjust the sharpness percentage for a given area, as well as the boundaries of the central zone and the curve that determines the reduction in sampling density. |
 | Fix Dongle Wi-Fi | Add the ability to connect to a PC via a USB or PCIe Wi-Fi adapter. |
 | Custom VR environments | Upload your own VR environments |
+
+Version 0.3.6-alpha adds an optional per-game **Gamma** launch override from **0.50 to 2.00**, with **1.00** neutral. Update the Streamer Helper to 0.3.6 to apply gamma before launch and restore the previous value after exit. Manual gamma changes made while a game is running are preserved.
 
 ## Screenshots
 

@@ -11,7 +11,8 @@ namespace VirtualDesktop.Unlock
         public int Fps; public int Quality;
         public float? HorizontalFov; public float? VerticalFov;
         public float? RenderResolution; public bool? UseSharpening; public float? Sharpening;
-        public LaunchPreset(int fps,int quality,float? horizontalFov=null,float? verticalFov=null,float? renderResolution=null,bool? useSharpening=null,float? sharpening=null){Fps=fps;Quality=quality;HorizontalFov=horizontalFov;VerticalFov=verticalFov;RenderResolution=renderResolution;UseSharpening=useSharpening;Sharpening=sharpening;}
+        public float? Gamma;
+        public LaunchPreset(int fps,int quality,float? horizontalFov=null,float? verticalFov=null,float? renderResolution=null,bool? useSharpening=null,float? sharpening=null,float? gamma=null){Fps=fps;Quality=quality;HorizontalFov=horizontalFov;VerticalFov=verticalFov;RenderResolution=renderResolution;UseSharpening=useSharpening;Sharpening=sharpening;Gamma=gamma;}
     }
     public sealed class LaunchPresetConfiguration
     {
@@ -22,6 +23,7 @@ namespace VirtualDesktop.Unlock
         public static bool ValidFov(float value){return !Single.IsNaN(value)&&!Single.IsInfinity(value)&&value>=0.4f&&value<=1f;}
         public static bool ValidRender(float value){return FiniteRange(value,0.5f,2f);}
         public static bool ValidSharpening(float value){return FiniteRange(value,0.05f,1f);}
+        public static bool ValidGamma(float value){return FiniteRange(value,0.5f,2f);}
         private static bool FiniteRange(float value,float min,float max){return !Single.IsNaN(value)&&!Single.IsInfinity(value)&&value>=min&&value<=max;}
         private static float? Number(XmlReader reader,string name,Func<float,bool> valid)
         {
@@ -33,7 +35,7 @@ namespace VirtualDesktop.Unlock
             var text=reader.GetAttribute(name);if(text==null)return null;bool value;
             if(!System.Boolean.TryParse(text,out value))throw new InvalidDataException("Invalid launch-preset value: "+name);return value;
         }
-        public static bool ValidAdvanced(LaunchPreset preset){return (!preset.RenderResolution.HasValue||ValidRender(preset.RenderResolution.Value))&&preset.UseSharpening.HasValue==preset.Sharpening.HasValue&&(!preset.Sharpening.HasValue||ValidSharpening(preset.Sharpening.Value));}
+        public static bool ValidAdvanced(LaunchPreset preset){return (!preset.Gamma.HasValue||ValidGamma(preset.Gamma.Value))&&(!preset.RenderResolution.HasValue||ValidRender(preset.RenderResolution.Value))&&preset.UseSharpening.HasValue==preset.Sharpening.HasValue&&(!preset.Sharpening.HasValue||ValidSharpening(preset.Sharpening.Value));}
         private static void FloatAttr(XmlWriter w,string name,float? value){if(value.HasValue)w.WriteAttributeString(name,value.Value.ToString("R",CultureInfo.InvariantCulture));}
         private static float? Fov(XmlReader reader,string name)
         {
@@ -46,11 +48,11 @@ namespace VirtualDesktop.Unlock
             if(new FileInfo(path).Length>65536)throw new InvalidDataException("Launch-preset file too large.");
             using(var r=XmlReader.Create(path,new XmlReaderSettings{DtdProcessing=DtdProcessing.Prohibit,XmlResolver=null,MaxCharactersInDocument=65536}))
             {
-                r.MoveToContent();if(r.Name!="LaunchPresets"||(r.GetAttribute("version")!="1"&&r.GetAttribute("version")!="2"&&r.GetAttribute("version")!="3"))throw new InvalidDataException("Unsupported launch-preset format.");
+                r.MoveToContent();if(r.Name!="LaunchPresets"||(r.GetAttribute("version")!="1"&&r.GetAttribute("version")!="2"&&r.GetAttribute("version")!="3"&&r.GetAttribute("version")!="4"))throw new InvalidDataException("Unsupported launch-preset format.");
                 while(r.Read())if(r.NodeType==XmlNodeType.Element){
                     uint id;int fps,quality;
                     if(r.Depth!=1||r.Name!="Game"||r.GetAttribute("platform")!="Steam"||!UInt32.TryParse(r.GetAttribute("appId"),out id)||id==0||!Int32.TryParse(r.GetAttribute("fps"),out fps)||Array.IndexOf(FrameRates,fps)<0||!Int32.TryParse(r.GetAttribute("quality"),out quality)||quality< -1||quality>7||config.Games.Count>=1000||config.Games.ContainsKey(id))throw new InvalidDataException("Invalid or duplicate launch preset.");
-                    var preset=new LaunchPreset(fps,quality,Fov(r,"horizontalFov"),Fov(r,"verticalFov"),Number(r,"renderResolution",ValidRender),Boolean(r,"useSharpening"),Number(r,"sharpening",ValidSharpening));
+                    var preset=new LaunchPreset(fps,quality,Fov(r,"horizontalFov"),Fov(r,"verticalFov"),Number(r,"renderResolution",ValidRender),Boolean(r,"useSharpening"),Number(r,"sharpening",ValidSharpening),Number(r,"gamma",ValidGamma));
                     if(!ValidAdvanced(preset))throw new InvalidDataException("Sharpening preset requires both enabled state and strength.");
                     config.Games.Add(id,preset);
                 }
@@ -63,17 +65,17 @@ namespace VirtualDesktop.Unlock
             string temp=path+"."+Guid.NewGuid().ToString("N")+".tmp";
             try{
                 using(var w=XmlWriter.Create(temp,new XmlWriterSettings{Indent=true})){
-                    bool fov=false,advanced=false;foreach(var preset in Games.Values){if(preset.HorizontalFov.HasValue||preset.VerticalFov.HasValue)fov=true;if(preset.RenderResolution.HasValue||preset.UseSharpening.HasValue)advanced=true;}
-                    w.WriteStartElement("LaunchPresets");w.WriteAttributeString("version",advanced?"3":fov?"2":"1");
+                    bool fov=false,advanced=false,gamma=false;foreach(var preset in Games.Values){if(preset.HorizontalFov.HasValue||preset.VerticalFov.HasValue)fov=true;if(preset.RenderResolution.HasValue||preset.UseSharpening.HasValue)advanced=true;if(preset.Gamma.HasValue)gamma=true;}
+                    w.WriteStartElement("LaunchPresets");w.WriteAttributeString("version",gamma?"4":advanced?"3":fov?"2":"1");
                     foreach(var item in Games){
                         if(item.Key==0||Array.IndexOf(FrameRates,item.Value.Fps)<0||item.Value.Quality< -1||item.Value.Quality>7||Games.Count>1000)throw new InvalidDataException("Invalid launch preset.");
-                        if(!ValidAdvanced(item.Value))throw new InvalidDataException("Invalid render resolution or sharpening preset.");
+                        if(!ValidAdvanced(item.Value))throw new InvalidDataException("Invalid gamma, render resolution, or sharpening preset.");
                         if((item.Value.HorizontalFov.HasValue&&!ValidFov(item.Value.HorizontalFov.Value))||(item.Value.VerticalFov.HasValue&&!ValidFov(item.Value.VerticalFov.Value)))throw new InvalidDataException("Invalid FOV tangent.");
                         w.WriteStartElement("Game");w.WriteAttributeString("platform","Steam");w.WriteAttributeString("appId",item.Key.ToString(CultureInfo.InvariantCulture));w.WriteAttributeString("fps",item.Value.Fps.ToString(CultureInfo.InvariantCulture));w.WriteAttributeString("quality",item.Value.Quality.ToString(CultureInfo.InvariantCulture));
                         if(item.Value.HorizontalFov.HasValue)w.WriteAttributeString("horizontalFov",item.Value.HorizontalFov.Value.ToString("R",CultureInfo.InvariantCulture));
                         if(item.Value.VerticalFov.HasValue)w.WriteAttributeString("verticalFov",item.Value.VerticalFov.Value.ToString("R",CultureInfo.InvariantCulture));FloatAttr(w,"renderResolution",item.Value.RenderResolution);
                         if(item.Value.UseSharpening.HasValue)w.WriteAttributeString("useSharpening",item.Value.UseSharpening.Value?"true":"false");
-                        FloatAttr(w,"sharpening",item.Value.Sharpening);w.WriteEndElement();
+                        FloatAttr(w,"sharpening",item.Value.Sharpening);FloatAttr(w,"gamma",item.Value.Gamma);w.WriteEndElement();
                     }
                     w.WriteEndElement();
                 }

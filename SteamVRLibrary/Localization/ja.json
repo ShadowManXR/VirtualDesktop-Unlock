@@ -1,4 +1,6 @@
 {
+  "Gamma": "ガンマ",
+  "Override gamma": "ガンマを上書き",
   "Show logs": "ログを表示",
   "Could not open logs": "ログを開けませんでした",
   "Latency (ms)": "遅延 (ms)",

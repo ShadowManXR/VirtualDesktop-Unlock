@@ -94,6 +94,12 @@ class RenderSharpenHookTest
             Check((bool)bufferType.GetField("IsDirty",Flags).GetValue(buffer),"Sharpening changes mark the effect constant buffer dirty for upload");
             set("UseSharpening",false);set("RenderResolutionOverride",1f);set("Sharpening",0.7f);
             Check(Marshal.ReadInt32(memory,0)==0&&Marshal.ReadInt32(memory,4)==0&&Float(native,renderOffset)==1f&&Float(memory,8)==0.7f&&Float(memory,12)==0.7f,"Original render scale, sharpening disabled state and strength can be restored independently");
+            var userType=assembly.GetType("VirtualDesktop.Mobile.SharedUserSettings",true);var user=FormatterServices.GetUninitializedObject(userType);
+            int gammaChanges=0;userType.GetEvent("GammaChanged").AddEventHandler(user,new EventHandler(delegate{gammaChanges++;}));
+            foreach(float gamma in new[]{0.5f,1f,1.25f,2f,0.75f}){
+                int before=gammaChanges;bridge.Invoke(null,new object[]{user,"Gamma",gamma});
+                Check((float)userType.GetProperty("Gamma").GetValue(user,null)==gamma&&gammaChanges==before+1,"Original shared gamma setter preserves the preset and emits its change event: "+gamma);
+            }
             Console.WriteLine("Checks passed: "+checks+". Isolated settings, owned VR config memory and CPU-side shader buffers only; no GPU device, live Streamer or game accessed.");return 0;
         }catch(Exception error){Console.WriteLine(error);return 1;}
         finally{if(pointer!=null&&owner!=null)pointer(owner,IntPtr.Zero);if(native!=IntPtr.Zero)Marshal.FreeHGlobal(native);if(data!=null)data.Dispose();if(timer!=null)timer.Dispose();}
