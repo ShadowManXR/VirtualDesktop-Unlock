@@ -48,7 +48,7 @@ The desktop app writes startup events, library scan warnings, and exception deta
 
 ## Screenshots
 
-These desktop screenshots were captured in v0.2.8.
+These desktop screenshots were captured in v0.3.4.
 
 **Game library**
 
