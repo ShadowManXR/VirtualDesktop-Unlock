@@ -3,6 +3,7 @@ namespace SteamVRLibrary;
 internal sealed class AppLog(string path)
 {
     private const long MaxBytes = 2 * 1024 * 1024;
+    internal string DirectoryPath => Path.GetDirectoryName(Path.GetFullPath(path))!;
     internal static AppLog Current { get; set; } = new(Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Virtual Desktop Unlock", "Logs", "app.log"));

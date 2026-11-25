@@ -1,4 +1,6 @@
 {
+  "Show logs": "Afficher les journaux",
+  "Could not open logs": "Impossible d’ouvrir les journaux",
   "Latency (ms)": "Latence (ms)",
   "Total": "Total",
   "Game render time": "Rendu du jeu",
@@ -95,7 +97,7 @@
   "Stock bitrate limits": "Limites de débit standard",
   "Choose the games you want to play in VR.": "Choisissez les jeux à utiliser en VR.",
   "Search": "Rechercher",
-  "Search games or Steam app ID…": "Jeu ou identifiant Steam…",
+  "games or Steam app ID…": "Jeu ou identifiant Steam…",
   "Steam games": "Jeux Steam",
   "Not in your VR library": "Absents de votre bibliothèque VR",
   "VD cache games": "Jeux du cache VD",

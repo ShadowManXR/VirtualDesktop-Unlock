@@ -1,4 +1,6 @@
 {
+  "Show logs": "عرض السجلات",
+  "Could not open logs": "تعذر فتح السجلات",
   "Latency (ms)": "زمن التأخير (مللي ثانية)",
   "Total": "الإجمالي",
   "Game render time": "وقت عرض اللعبة",
@@ -95,7 +97,7 @@
   "Stock bitrate limits": "حدود معدل البت الافتراضية",
   "Choose the games you want to play in VR.": "اختر الألعاب التي تريد تشغيلها في الواقع الافتراضي.",
   "Search": "بحث",
-  "Search games or Steam app ID…": "ابحث عن لعبة أو معرّف تطبيق Steam…",
+  "games or Steam app ID…": "ابحث عن لعبة أو معرّف تطبيق Steam…",
   "Steam games": "ألعاب Steam",
   "Not in your VR library": "ليست في مكتبة الواقع الافتراضي",
   "VD cache games": "ألعاب ذاكرة VD المؤقتة",

@@ -1,4 +1,6 @@
 {
+  "Show logs": "Mostrar registros",
+  "Could not open logs": "No se pudieron abrir los registros",
   "Latency (ms)": "Latencia (ms)",
   "Total": "Total",
   "Game render time": "Renderizado del juego",
@@ -95,7 +97,7 @@
   "Stock bitrate limits": "Límites de tasa originales",
   "Choose the games you want to play in VR.": "Elige los juegos que quieras jugar en RV.",
   "Search": "Buscar",
-  "Search games or Steam app ID…": "Juego o ID de Steam…",
+  "games or Steam app ID…": "Juego o ID de Steam…",
   "Steam games": "Juegos de Steam",
   "Not in your VR library": "Fuera de tu biblioteca de RV",
   "VD cache games": "Juegos de la caché VD",

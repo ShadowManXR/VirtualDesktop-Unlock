@@ -1,4 +1,6 @@
 {
+  "Show logs": "ログを表示",
+  "Could not open logs": "ログを開けませんでした",
   "Latency (ms)": "遅延 (ms)",
   "Total": "合計",
   "Game render time": "ゲーム描画時間",
@@ -95,7 +97,7 @@
   "Stock bitrate limits": "標準ビットレート制限",
   "Choose the games you want to play in VR.": "VR でプレイするゲームを選択してください。",
   "Search": "検索",
-  "Search games or Steam app ID…": "ゲーム名または Steam アプリ ID…",
+  "games or Steam app ID…": "ゲーム名または Steam アプリ ID…",
   "Steam games": "Steam ゲーム",
   "Not in your VR library": "VR ライブラリに未追加",
   "VD cache games": "VD キャッシュのゲーム",

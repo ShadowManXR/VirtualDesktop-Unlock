@@ -1,4 +1,6 @@
 {
+  "Show logs": "Protokolle anzeigen",
+  "Could not open logs": "Protokolle konnten nicht geöffnet werden",
   "Latency (ms)": "Latenz (ms)",
   "Total": "Gesamt",
   "Game render time": "Spiel-Renderzeit",
@@ -95,7 +97,7 @@
   "Stock bitrate limits": "Standard-Bitratenlimits",
   "Choose the games you want to play in VR.": "Wählen Sie die Spiele für VR aus.",
   "Search": "Suchen",
-  "Search games or Steam app ID…": "Spiel oder Steam-App-ID…",
+  "games or Steam app ID…": "Spiel oder Steam-App-ID…",
   "Steam games": "Steam-Spiele",
   "Not in your VR library": "Nicht in Ihrer VR-Bibliothek",
   "VD cache games": "Spiele im VD-Cache",

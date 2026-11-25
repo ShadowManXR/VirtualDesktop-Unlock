@@ -1,4 +1,6 @@
 {
+  "Show logs": "Показать логи",
+  "Could not open logs": "Не удалось открыть логи",
   "Latency (ms)": "Задержка (мс)",
   "Total": "Общая",
   "Game render time": "Время рендеринга игры",
@@ -95,7 +97,7 @@
   "Stock bitrate limits": "Стандартные лимиты битрейта",
   "Choose the games you want to play in VR.": "Выберите игры для запуска в VR.",
   "Search": "Поиск",
-  "Search games or Steam app ID…": "Название игры или Steam ID…",
+  "games or Steam app ID…": "Название игры или Steam ID…",
   "Steam games": "Игры Steam",
   "Not in your VR library": "Не добавлены в VR-библиотеку",
   "VD cache games": "Игры в кэше VD",

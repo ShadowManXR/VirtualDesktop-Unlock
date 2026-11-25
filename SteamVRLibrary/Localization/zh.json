@@ -1,4 +1,6 @@
 {
+  "Show logs": "显示日志",
+  "Could not open logs": "无法打开日志",
   "Latency (ms)": "延迟 (ms)",
   "Total": "总计",
   "Game render time": "游戏渲染时间",
@@ -95,7 +97,7 @@
   "Stock bitrate limits": "默认码率限制",
   "Choose the games you want to play in VR.": "选择要在 VR 中游玩的游戏。",
   "Search": "搜索",
-  "Search games or Steam app ID…": "搜索游戏或 Steam 应用 ID…",
+  "games or Steam app ID…": "搜索游戏或 Steam 应用 ID…",
   "Steam games": "Steam 游戏",
   "Not in your VR library": "未添加到 VR 游戏库",
   "VD cache games": "VD 缓存游戏",

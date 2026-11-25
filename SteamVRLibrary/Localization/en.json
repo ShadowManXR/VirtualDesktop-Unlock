@@ -1,4 +1,6 @@
 {
+  "Show logs": "Show logs",
+  "Could not open logs": "Could not open logs",
   "Latency (ms)": "Latency (ms)",
   "Total": "Total",
   "Game render time": "Game render time",
@@ -95,7 +97,7 @@
   "Stock bitrate limits": "Stock bitrate limits",
   "Choose the games you want to play in VR.": "Choose the games you want to play in VR.",
   "Search": "Search",
-  "Search games or Steam app ID…": "Search games or Steam app ID…",
+  "games or Steam app ID…": "games or Steam app ID…",
   "Steam games": "Steam games",
   "Not in your VR library": "Not in your VR library",
   "VD cache games": "VD cache games",

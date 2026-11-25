@@ -2,7 +2,7 @@
 param([string]$StreamerPath,[switch]$SkipTests)
 $ErrorActionPreference='Stop'
 $root=$PSScriptRoot
-$version='0.3.4-alpha'
+$version='0.3.5-alpha'
 $env:DOTNET_CLI_HOME=Join-Path $root '.dotnet-build'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'
 $env:DOTNET_GENERATE_ASPNET_CERTIFICATE='false'
@@ -153,7 +153,7 @@ foreach($name in @('Virtual Desktop Unlock.exe','Virtual Desktop Unlock.dll','Vi
 New-Item -ItemType Directory -Path (Join-Path $stage 'runtime-override') -Force | Out-Null
 foreach($name in @('VirtualDesktop.LibraryOverrides.dll','VirtualDesktop.Streamer.exe.config','manifest.json')){Copy-Item -LiteralPath (Join-Path $hook $name) -Destination (Join-Path $stage 'runtime-override')}
 Get-ChildItem -LiteralPath (Join-Path $root 'scripts') -File |
-    Where-Object { $_.Extension -in '.cmd','.ps1' } | Copy-Item -Destination $stage
+    Where-Object { $_.Extension -in '.cmd','.ps1' -and $_.Name -notlike '*Tests.ps1' } | Copy-Item -Destination $stage
 $setupName='Install Streamer Helper.exe'
 $setupResources=@("/resource:$root\scripts\HelperInstaller.ps1,HelperInstaller.ps1")
 foreach($name in @('VirtualDesktop.LibraryOverrides.dll','VirtualDesktop.Streamer.exe.config','manifest.json')){

@@ -1,4 +1,5 @@
 using Microsoft.Win32;
+using System.Diagnostics;
 using VirtualDesktop.Unlock;
 
 namespace SteamVRLibrary;
@@ -58,14 +59,14 @@ public sealed class SettingsForm : Form
         BackColor = Color.FromArgb(14, 20, 31);
         ForeColor = Color.White;
         Font = new Font("Segoe UI", 10);
-        ClientSize = new Size(680, 514);
+        ClientSize = new Size(680, 488);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = MinimizeBox = false;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.CenterParent;
         AutoScaleMode = AutoScaleMode.Dpi;
-        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(24), ColumnCount = 1, RowCount = 11 };
-        foreach (int height in new[] { 40, 32, 44, 48, 48, 48, 48, 34, 42, 44, 26 }) root.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
+        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(24), ColumnCount = 1, RowCount = 10 };
+        foreach (int height in new[] { 40, 32, 44, 48, 48, 48, 48, 34, 42, 44 }) root.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
         Controls.Add(root);
         root.Controls.Add(new Label { Text = "Settings", AutoSize = true, Font = new Font(Font.FontFamily, 19, FontStyle.Bold) }, 0, 0);
         root.Controls.Add(new Label { Text = "Language", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, ForeColor = Color.FromArgb(159, 176, 199) }, 0, 1);
@@ -186,8 +187,32 @@ public sealed class SettingsForm : Form
                 if (showErrors) LocalizedMessageBox.Show(this, error, "Could not save fovea size", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         };
-        root.Controls.Add(close, 0, 9);
-        root.Controls.Add(new Label { Text = "by ShadowManXR", Dock = DockStyle.Fill, TextAlign = ContentAlignment.BottomCenter, ForeColor = Color.FromArgb(159, 176, 199), Font = new Font(Font.FontFamily, 9), Margin = Padding.Empty }, 0, 10);
+        var logs = new Button
+        {
+            Text = "Show logs", AutoSize = true, MinimumSize = new Size(100, 34),
+            Anchor = AnchorStyles.Left, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(23, 32, 47),
+            ForeColor = Color.White, Padding = new Padding(8, 0, 8, 0), Margin = Padding.Empty
+        };
+        logs.Click += (_, _) =>
+        {
+            try
+            {
+                Directory.CreateDirectory(AppLog.Current.DirectoryPath);
+                using var explorer = Process.Start(new ProcessStartInfo(AppLog.Current.DirectoryPath) { UseShellExecute = true });
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or InvalidOperationException or System.Security.SecurityException)
+            {
+                AppLog.Current.Error("Could not open logs", error);
+                if (showErrors) LocalizedMessageBox.Show(this, error, "Could not open logs", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        };
+        var footer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty };
+        footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        close.Margin = Padding.Empty;
+        footer.Controls.Add(logs, 0, 0);
+        footer.Controls.Add(close, 1, 0);
+        root.Controls.Add(footer, 0, 9);
         AcceptButton = CancelButton = close;
         Localizer.Apply(this);
     }

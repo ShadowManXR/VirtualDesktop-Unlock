@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.5-alpha — 2026-11-25
+
+- Add padding inside the search field and use the English placeholder "games or Steam app ID…".
+- Move the author credit to the About window beside Close and add a Show logs button beside Done in Settings.
+- Restore third-party VR selections from the shared catalog when reopening the app or switching builds, and update those selections only when games are explicitly added to or removed from VR.
+
 ## 0.3.4-alpha — 2026-11-24
 
 - Add Monitoring beside the bitrate controls, with FPS, measured video bitrate, and headset battery graphs.

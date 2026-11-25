@@ -94,7 +94,7 @@ public sealed class LibraryForm : Form
     private readonly Button deleteProgram = MakeButton("Delete");
     private readonly ListView steam = MakeList();
     private readonly ListView vr = MakeList();
-    private readonly TextBox search = new() { PlaceholderText = "Search games or Steam app ID…", BorderStyle = BorderStyle.FixedSingle, Dock = DockStyle.Fill };
+    private readonly TextBox search = new() { PlaceholderText = "games or Steam app ID…", BorderStyle = BorderStyle.None, Dock = DockStyle.Fill };
     private readonly Label steamCount = TextLabel("Loading installed games…", Muted, 9);
     private readonly Label vrCount = TextLabel("Saved on this PC", Muted, 9);
     private readonly Label status = TextLabel("Loading…", Muted, 9);
@@ -237,6 +237,15 @@ public sealed class LibraryForm : Form
         search.Font = new Font("Segoe UI", 11);
         search.Margin = new Padding(0, 4, 0, 6);
         search.AccessibleName = "Search games";
+        var searchInput = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 1, RowCount = 1, BorderStyle = BorderStyle.FixedSingle,
+            BackColor = Card, Padding = new Padding(8, 1, 8, 1), Margin = search.Margin
+        };
+        searchInput.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        search.Margin = Padding.Empty;
+        searchInput.Controls.Add(search, 0, 0);
         var searchRow = new TableLayoutPanel
         {
             Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty,
@@ -247,9 +256,9 @@ public sealed class LibraryForm : Form
         searchRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         var searchLabel = TextLabel("Search", Muted, 10);
         searchLabel.Dock = DockStyle.Fill;
-        searchLabel.Margin = new Padding(0, search.Margin.Top, 8, search.Margin.Bottom);
+        searchLabel.Margin = new Padding(0, searchInput.Margin.Top, 8, searchInput.Margin.Bottom);
         searchRow.Controls.Add(searchLabel, 0, 0);
-        searchRow.Controls.Add(search, 1, 0);
+        searchRow.Controls.Add(searchInput, 1, 0);
         root.Controls.Add(searchRow, 0, 3);
 
         var lists = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, Margin = Padding.Empty };
@@ -413,13 +422,14 @@ public sealed class LibraryForm : Form
             foreach (var warning in next.Warnings)
                 AppLog.Current.Warning("Library scan: " + warning);
             var saved = store.Load();
+            bool saveRequired = saved == null;
             if (saved == null)
             {
                 // A saved empty library remains empty on refresh and next launch.
-                saved = new LibraryState { Games = next.Games.Where(g => next.CachedVrIds.Contains(g.Id)).Select(g => g with { Origin = "Imported from Virtual Desktop cache" }).ToList() };
-                store.Save(saved);
+                saved = new LibraryState { Games = next.Games.Where(g => !g.IsCustom && next.CachedVrIds.Contains(g.Id)).Select(g => g with { Origin = "Imported from Virtual Desktop cache" }).ToList() };
             }
-            saved.Games.RemoveAll(game => game.IsCustom && !customGames.Games.Any(current => current.Id == game.Id));
+            if (customGames.RestoreSelection(saved)) saveRequired = true;
+            if (saveRequired) store.Save(saved);
             scan = next; state = saved; ready = true;
             Populate();
             SyncOverrides("Loaded library");
@@ -435,7 +445,7 @@ public sealed class LibraryForm : Form
         customGames.Reload();
         scan = scan with { Games = scan.Games.Where(game => !game.IsCustom).Concat(customGames.Games).ToList() };
         state = store.Load() ?? new LibraryState { Games = scan.Games.Where(g => scan.CachedVrIds.Contains(g.Id)).Select(g => g with { Origin = "Imported from Virtual Desktop cache" }).ToList() };
-        state.Games.RemoveAll(game => game.IsCustom && !customGames.Games.Any(current => current.Id == game.Id));
+        customGames.RestoreSelection(state);
         ready = true;
         Populate();
         Localizer.SetText(status, "Saved automatically  ·  Connect Virtual Desktop before launching a VR game.");
@@ -597,7 +607,15 @@ public sealed class LibraryForm : Form
             : state.Games.Where(g => !ids.Contains(g.Id)).ToList() };
         try
         {
-            store.Save(next); state = next; Populate();
+            store.Save(next);
+            try { customGames.SyncSelection(next); }
+            catch
+            {
+                try { store.Save(state); }
+                catch (Exception error) { AppLog.Current.Error("Could not restore the local library after a custom selection save failed", error); }
+                throw;
+            }
+            state = next; Populate();
             SyncOverrides(toVr ? "Saved additions: {0}" : "Saved removals: {0}",selected.Count);
         }
         catch (Exception e) { LocalizedMessageBox.Show(this, e, "Could not save — move cancelled", MessageBoxButtons.OK, MessageBoxIcon.Error); }
@@ -625,7 +643,6 @@ public sealed class LibraryForm : Form
         try
         {
             sharedOverrides.Save(state);
-            customGames.SyncSelection(state);
             syncedIds = state.Games.Where(g => !g.IsCustom).Select(g => uint.Parse(g.Id)).Distinct().Order().ToArray();
             Localizer.SetText(status,action,args);
             UpdateRestartNotice();

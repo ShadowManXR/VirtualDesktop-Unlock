@@ -37,7 +37,14 @@ internal static class CustomGameTests
         try { stale.Delete([fallback.Id]); }
         catch (IOException) { conflict = true; }
         check(conflict && CustomGameCatalog.Read(catalog).Single().Selected, "A stale catalog writer preserves newer game selections");
+        var steamGame = new Game("111", "Steam selection", directory);
+        var restored = new LibraryState { Games = [steamGame] };
+        check(games.RestoreSelection(restored) && restored.Games.SequenceEqual(new[] { steamGame, fallback }) && CustomGameCatalog.Read(catalog).Single().Selected,
+            "Shared custom selections restore into a fresh local library without changing Steam selections or the catalog");
+        check(!games.RestoreSelection(restored), "Restoring unchanged custom selections does not require another local save");
         games.SyncSelection(new LibraryState());
+        check(games.RestoreSelection(restored) && restored.Games.SequenceEqual(new[] { steamGame }),
+            "A stale local library cannot reselect a custom game removed in another build");
         games.Delete([fallback.Id]);
         check(!File.Exists(fallback.CoverPath), "Deleting a custom game removes its generated cover");
         string[] coverTitles = ["VR", "Teenage Mutant Ninja Turtles Empire City",
@@ -95,10 +102,28 @@ internal static class CustomGameTests
             "Custom executable IDs stay out of Steam discovery overrides");
         var saved = new LibraryStore(Path.Combine(directory, "library.json")).Load()!;
         check(saved.Games.Single().ExecutablePath == executable, "Selected custom executable survives library save and reload");
+        void CheckReopened(string path, bool selected, string message)
+        {
+            using var reopened = new LibraryForm(true, path, new PreviewStreamer());
+            reopened.LoadPreview(scan);
+            var lists = Children(reopened).OfType<ListView>().ToArray();
+            var reopenedVr = lists.Single(list => list.AccessibleName == "VD cache games");
+            var reopenedSteam = lists.Single(list => list.AccessibleName!.StartsWith("Installed"));
+            check(reopenedVr.Items.Cast<ListViewItem>().Any(item => ((Game)item.Tag!).Id == custom.Id) == selected &&
+                reopenedSteam.Items.Cast<ListViewItem>().Any(item => ((Game)item.Tag!).Id == custom.Id) != selected &&
+                CustomGameCatalog.Read(catalog).Single().Selected == selected, message);
+        }
+        CheckReopened(Path.Combine(directory, "library.json"), true, "Reopening the same app keeps the selected custom game in VD cache games");
+        var otherStore = new LibraryStore(Path.Combine(directory, "other-build-library.json"));
+        otherStore.Save(new LibraryState());
+        CheckReopened(otherStore.Path, true, "Opening a build with an empty saved library restores custom selections from the shared catalog");
+        CheckReopened(Path.Combine(directory, "fresh-build-library.json"), true, "Opening a build without a local library keeps shared custom selections");
         vr.Items[0].Selected = true;
         remove.PerformClick();
         check(!CustomGameCatalog.Read(catalog).Single().Selected && steam.Items.Count == 2,
             "Removing a custom executable from VR returns it to Steam games");
+        otherStore.Save(saved);
+        CheckReopened(otherStore.Path, false, "Reopening an older build cannot undo an explicit custom game removal");
         form.LoadPreview(scan);
         item = steam.Items.Cast<ListViewItem>().Single(item => ((Game)item.Tag!).IsCustom);
         item.Selected = true;

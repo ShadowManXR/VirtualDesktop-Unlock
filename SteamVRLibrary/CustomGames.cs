@@ -64,6 +64,18 @@ internal sealed class CustomGames(string path)
         }
     }
 
+    internal bool RestoreSelection(LibraryState state)
+    {
+        // Custom selections belong to the shared catalog, which survives moving
+        // the app or opening a different build with a new local library file.
+        var selected = Entries.Where(entry => entry.Selected).Select(entry => entry.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)).ToHashSet();
+        var games = state.Games.Where(game => !game.IsCustom)
+            .Concat(Games.Where(game => selected.Contains(game.Id))).ToList();
+        if (state.Games.SequenceEqual(games)) return false;
+        state.Games = games;
+        return true;
+    }
+
     internal void SyncSelection(LibraryState state)
     {
         var selected = state.Games.Where(game => game.IsCustom).Select(game => game.Id).ToHashSet();

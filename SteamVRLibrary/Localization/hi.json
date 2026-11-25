@@ -1,4 +1,6 @@
 {
+  "Show logs": "लॉग दिखाएँ",
+  "Could not open logs": "लॉग नहीं खोले जा सके",
   "Latency (ms)": "विलंब (ms)",
   "Total": "कुल",
   "Game render time": "गेम रेंडर समय",
@@ -95,7 +97,7 @@
   "Stock bitrate limits": "डिफ़ॉल्ट बिटरेट सीमाएँ",
   "Choose the games you want to play in VR.": "VR में खेलने के लिए गेम चुनें।",
   "Search": "खोजें",
-  "Search games or Steam app ID…": "गेम या Steam ऐप ID खोजें…",
+  "games or Steam app ID…": "गेम या Steam ऐप ID खोजें…",
   "Steam games": "Steam गेम",
   "Not in your VR library": "आपकी VR लाइब्रेरी में नहीं हैं",
   "VD cache games": "VD कैश के गेम",

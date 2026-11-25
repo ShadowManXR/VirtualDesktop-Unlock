@@ -35,8 +35,21 @@ internal sealed class AboutForm : Form
         layout.Controls.Add(MakeLink("Repository", "https://github.com/ShadowManXR/VirtualDesktop-Unlock"), 0, 1);
         layout.Controls.Add(MakeLink("Donate", "https://ko-fi.com/shadowmanxr"), 0, 2);
         var close = new Button { Text = "Close", AutoSize = true, Anchor = AnchorStyles.Right,
-            DialogResult = DialogResult.Cancel, Margin = new Padding(0, 14, 0, 0) };
-        layout.Controls.Add(close, 0, 3);
+            DialogResult = DialogResult.Cancel, Margin = Padding.Empty };
+        var footer = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 2, RowCount = 1,
+            Margin = new Padding(0, 14, 0, 0)
+        };
+        footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        footer.Controls.Add(new Label
+        {
+            Text = "by ShadowManXR", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = Color.FromArgb(159, 176, 199), Font = new Font(Font.FontFamily, 9), Margin = Padding.Empty
+        }, 0, 0);
+        footer.Controls.Add(close, 1, 0);
+        layout.Controls.Add(footer, 0, 3);
         Controls.Add(layout);
         AcceptButton = CancelButton = close;
         Localizer.Apply(this);

@@ -364,7 +364,7 @@ internal static class SelfTests
                 settings.ShowInTaskbar = false; settings.StartPosition = FormStartPosition.Manual;
                 settings.Location = new Point(-20000, -20000); settings.Show(); Application.DoEvents();
                 var settingsControls = settings.Controls[0].Controls.Cast<Control>().ToArray();
-                var experimentalRows = settingsControls.OfType<TableLayoutPanel>().ToArray();
+                var experimentalRows = settingsControls.OfType<TableLayoutPanel>().Where(row => row.Controls.OfType<CheckBox>().Any()).ToArray();
                 var experimentalOptions = experimentalRows.SelectMany(row => row.Controls.OfType<CheckBox>()).ToArray();
                 Check(experimentalRows.Length == 2 && experimentalRows.All(row =>
                     row.Controls.OfType<Label>().Any(label => label.Text == "* Experimental" && label.ForeColor == Color.FromArgb(255, 171, 83))),

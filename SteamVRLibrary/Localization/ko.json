@@ -1,4 +1,6 @@
 {
+  "Show logs": "로그 보기",
+  "Could not open logs": "로그를 열 수 없습니다",
   "Latency (ms)": "지연 시간 (ms)",
   "Total": "전체",
   "Game render time": "게임 렌더링 시간",
@@ -95,7 +97,7 @@
   "Stock bitrate limits": "기본 비트레이트 제한",
   "Choose the games you want to play in VR.": "VR로 플레이할 게임을 선택하세요.",
   "Search": "검색",
-  "Search games or Steam app ID…": "게임 또는 Steam 앱 ID 검색…",
+  "games or Steam app ID…": "게임 또는 Steam 앱 ID 검색…",
   "Steam games": "Steam 게임",
   "Not in your VR library": "VR 라이브러리에 없음",
   "VD cache games": "VD 캐시 게임",
