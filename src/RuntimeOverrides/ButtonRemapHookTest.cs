@@ -19,14 +19,14 @@ internal static class ButtonRemapHookTest
     {
         var module = Assembly.LoadFrom(args[0]).ManifestModule;
         var helper = typeof(ButtonRemapProfile).Assembly.GetType("VirtualDesktop.LibraryOverrides.ButtonRemapRuntime", true);
-        var writer = (MethodInfo)module.ResolveMethod(0x06000410);
+        var writer = (MethodInfo)StreamerProfile.Method(module, 0x06000410);
         var target = FormatterServices.GetUninitializedObject(writer.DeclaringType);
         var frameType = writer.GetParameters()[0].ParameterType.GetElementType();
         var trackingField = FieldAt(module, writer, 0x20);
         var inputField = FieldAt(module, writer, 0x25);
-        var buttonField = module.ResolveField(0x04014ACE);
-        var touchField = module.ResolveField(0x04014ACF);
-        var axisField = module.ResolveField(0x04014AD4);
+        var buttonField = StreamerProfile.Field(module, 0x04014ACE);
+        var touchField = StreamerProfile.Field(module, 0x04014ACF);
+        var axisField = StreamerProfile.Field(module, 0x04014AD4);
 
         var setter = new DynamicMethod("SetOwnedMapping", typeof(void), new[] { typeof(object), typeof(IntPtr) }, typeof(ButtonRemapHookTest), true);
         var il = setter.GetILGenerator();
@@ -34,7 +34,7 @@ internal static class ButtonRemapHookTest
         il.Emit(OpCodes.Castclass, writer.DeclaringType);
         il.Emit(OpCodes.Ldarg_1);
         il.Emit(OpCodes.Conv_U);
-        il.Emit(OpCodes.Stfld, module.ResolveField(0x0400029A));
+        il.Emit(OpCodes.Stfld, StreamerProfile.Field(module, 0x0400029A));
         il.Emit(OpCodes.Ret);
         var setPointer = (Action<object, IntPtr>)setter.CreateDelegate(typeof(Action<object, IntPtr>));
 
@@ -46,7 +46,7 @@ internal static class ButtonRemapHookTest
         touchField.SetValue(input, Enum.ToObject(touchField.FieldType, touches));
         axisField.SetValue(input, axis);
         byte[] pressure = { 31, 192, 64, 128 };
-        var pressureFields = new[] { 0x04014AD0, 0x04014AD1, 0x04014AD2, 0x04014AD3 }.Select(module.ResolveField).ToArray();
+        var pressureFields = new[] { 0x04014AD0, 0x04014AD1, 0x04014AD2, 0x04014AD3 }.Select(t => StreamerProfile.Field(module, t)).ToArray();
         for (int i = 0; i < pressure.Length; i++) pressureFields[i].SetValue(input, pressure[i]);
         object tracking = Activator.CreateInstance(trackingField.FieldType);
         inputField.SetValue(tracking, input);

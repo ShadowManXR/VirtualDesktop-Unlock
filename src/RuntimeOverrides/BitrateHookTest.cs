@@ -26,8 +26,8 @@ public static class BitrateHookTest
             BitrateConfiguration.Defaults().Save(path);
             assembly=Assembly.LoadFrom(args[0]);
             updatedStreamer=assembly.GetName().Version==new Version(1,34,25,0);
-            ceiling=assembly.ManifestModule.ResolveMethod(updatedStreamer?0x060212CD:0x060212B6);
-            calculate=assembly.ManifestModule.ResolveMethod(updatedStreamer?0x060212CE:0x060212B7);
+            ceiling=StreamerProfile.Method(assembly.ManifestModule, updatedStreamer?0x060212CD:0x060212B6);
+            calculate=StreamerProfile.Method(assembly.ManifestModule, updatedStreamer?0x060212CE:0x060212B7);
             Check(Limit(1000,10,false)==200000000,"Disabled override preserves Quest 3 AV1 ceiling");
             var config=BitrateConfiguration.Defaults();config.Enabled=true;Apply(config);
             Check(Limit(1000,1,false)==800000000 && Limit(1000,2,false)==222000000 && Limit(1000,10,false)==222000000,
@@ -103,7 +103,7 @@ public static class BitrateHookTest
         var streamer=FormatterServices.GetUninitializedObject(streamerType);
         var slotTokens=updatedStreamer?new[]{0x04000293,0x04000294,0x04000295,0x04000296}:new[]{0x0400028F,0x04000291};
         var slotFields=new List<FieldInfo>();
-        foreach(int slotToken in slotTokens)slotFields.Add(assembly.ManifestModule.ResolveField(slotToken));
+        foreach(int slotToken in slotTokens)slotFields.Add(StreamerProfile.Field(assembly.ManifestModule,slotToken));
         int fwdToken=updatedStreamer?0x06000424:0x0600041D;
         // Verified on 1.34.25: wrapper fields are B6=H264, B7=H264+, B8=active-codec
         // target, B9=AV1. The stock VR forward fills the wrappers in slots 93/95;
@@ -116,10 +116,10 @@ public static class BitrateHookTest
             var wrapper=FormatterServices.GetUninitializedObject(wrapperType);GC.SuppressFinalize(wrapper);wrappers.Add(wrapper);
         }
         for(int slot=0;slot<slotFields.Count;slot++)slotFields[slot].SetValue(streamer,wrappers[slot]);
-        Action forward=delegate(){assembly.ManifestModule.ResolveMethod(fwdToken).Invoke(streamer,null);};
-        Func<int,int,int> forwardedRate=delegate(int wrapper,int rate){return (int)assembly.ManifestModule.ResolveField(rateTokens[rate]).GetValue(wrappers[wrapper]);};
-        Func<int,int,bool> everyWrapperRate=delegate(int rate,int value){foreach(var wrapper in wrappers){if((int)assembly.ManifestModule.ResolveField(rateTokens[rate]).GetValue(wrapper)!=value)return false;}return true;};
-        Func<int,int,bool> pairWrapperRate=delegate(int rate,int value){foreach(int w in new[]{0,2}){if((int)assembly.ManifestModule.ResolveField(rateTokens[rate]).GetValue(wrappers[w])!=value)return false;}return true;};
+        Action forward=delegate(){StreamerProfile.Method(assembly.ManifestModule,fwdToken).Invoke(streamer,null);};
+        Func<int,int,int> forwardedRate=delegate(int wrapper,int rate){return (int)StreamerProfile.Field(assembly.ManifestModule,rateTokens[rate]).GetValue(wrappers[wrapper]);};
+        Func<int,int,bool> everyWrapperRate=delegate(int rate,int value){foreach(var wrapper in wrappers){if((int)StreamerProfile.Field(assembly.ManifestModule,rateTokens[rate]).GetValue(wrapper)!=value)return false;}return true;};
+        Func<int,int,bool> pairWrapperRate=delegate(int rate,int value){foreach(int w in new[]{0,2}){if((int)StreamerProfile.Field(assembly.ManifestModule,rateTokens[rate]).GetValue(wrappers[w])!=value)return false;}return true;};
         forward();
         if(!updatedStreamer)
         {
@@ -152,9 +152,9 @@ public static class BitrateHookTest
         Console.WriteLine("owner handler token=0x"+ownerHandler.MetadataToken.ToString("X8"));
         mobileType.GetEvent("HmdTypeChanged").AddEventHandler(mobile,Delegate.CreateDelegate(typeof(EventHandler),streamer,ownerHandler));
         var config=BitrateConfiguration.Read(path);config.Enabled=false;config.Save(path);BitrateRuntime.RefreshNow(true);
-        Check((int)assembly.ManifestModule.ResolveField(updatedStreamer?0x04014DB9:0x04014DAD).GetValue(wrappers[0])==200000000,"Live disable notification restores existing encoder wrapper target");
+        Check((int)StreamerProfile.Field(assembly.ManifestModule, updatedStreamer?0x04014DB9:0x04014DAD).GetValue(wrappers[0])==200000000,"Live disable notification restores existing encoder wrapper target");
         config.Enabled=true;config.Save(path);BitrateRuntime.RefreshNow(true);
-        Check((int)assembly.ManifestModule.ResolveField(updatedStreamer?0x04014DB9:0x04014DAD).GetValue(wrappers[0])==250000000,"Live enable notification refreshes existing encoder wrapper target");
+        Check((int)StreamerProfile.Field(assembly.ManifestModule, updatedStreamer?0x04014DB9:0x04014DAD).GetValue(wrappers[0])==250000000,"Live enable notification refreshes existing encoder wrapper target");
         if(!updatedStreamer)Check(BitrateRuntime.CaptureDiagnostics().Contains("encoderTargets=300000000,1000000000,250000000 (NVENC "),"Diagnostics read targets from actual OculusStreamer encoder wrappers");
         else Check(BitrateRuntime.CaptureDiagnostics().Contains("encoderTargets=1000000000,1000000000,300000000,250000000 (NVENC unavailable)|0,0,0,0 (NVENC unavailable)|1000000000,1000000000,300000000,250000000 (NVENC unavailable)|0,0,0,0 (NVENC unavailable)"),"1.34.25 diagnostics read targets from actual OculusStreamer encoder wrappers");
         mobileType.GetField("_measuredBandwidth",All).SetValue(mobile,180000000);
@@ -174,7 +174,7 @@ public static class BitrateHookTest
             Check(BitrateRuntime.ReadNativeRateControl(new object())=="unavailable","1.34.25 native diagnostics stay unavailable once the encoder targets are verified");
             return;
         }
-        var pointer=assembly.ManifestModule.ResolveField(0x04014F7B);
+        var pointer=StreamerProfile.Field(assembly.ManifestModule, 0x04014F7B);
         var wrapper=FormatterServices.GetUninitializedObject(pointer.DeclaringType);GC.SuppressFinalize(wrapper);
         var setter=new DynamicMethod("SetTestConfigurationPointer",typeof(void),new[]{typeof(object),typeof(IntPtr)},typeof(BitrateHookTest),true);
         var il=setter.GetILGenerator();il.Emit(OpCodes.Ldarg_0);il.Emit(OpCodes.Castclass,pointer.DeclaringType);il.Emit(OpCodes.Ldarg_1);il.Emit(OpCodes.Conv_U);il.Emit(OpCodes.Stfld,pointer);il.Emit(OpCodes.Ret);

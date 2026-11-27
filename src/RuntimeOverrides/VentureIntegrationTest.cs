@@ -1,3 +1,4 @@
+using VirtualDesktop.Unlock;
 using System;
 using System.Collections;
 using System.Diagnostics;
@@ -39,8 +40,8 @@ internal static class VentureIntegrationTest
         Directory.CreateDirectory(root);
         var assembly = Assembly.LoadFrom(args[0]);
         Module module = assembly.ManifestModule;
-        module.ResolveField(0x04014843).SetValue(null, root);
-        module.ResolveField(0x04014844).SetValue(null, root);
+        StreamerProfile.Field(module, 0x04014843).SetValue(null, root);
+        StreamerProfile.Field(module, 0x04014844).SetValue(null, root);
         var runtime = Assembly.LoadFrom(args[1]).GetType("VirtualDesktop.LibraryOverrides.VentureRuntime", true);
         runtime.GetField("customCatalogPath", All).SetValue(null, Path.Combine(root, "CustomGames.xml"));
         Type preferencesType = runtime.Assembly.GetType("VirtualDesktop.Unlock.VenturePreferences", true);
@@ -118,7 +119,7 @@ internal static class VentureIntegrationTest
         object[] lookupArgs = { key, null };
         Check((bool)lookup.Invoke(collection, lookupArgs), "Headset category key is OculusRift");
         object tile = lookupArgs[1];
-        Func<int, object> field = token => module.ResolveMethod(token).Invoke(tile, null);
+        Func<int, object> field = token => StreamerProfile.Method(module, token).Invoke(tile, null);
         Check((string)field(0x06000160) == "Alpha Test Game" &&
             (string)field(0x06000162) == launcher &&
             (string)field(0x06000164) == "--launch com.example.alpha" &&
@@ -135,11 +136,11 @@ internal static class VentureIntegrationTest
         preferencesType.GetMethod("SetEnabled").Invoke(preferences, new object[] { false });
         CheckCustomGames(module, runtime, collectionType, root);
         var stock = Activator.CreateInstance(collectionType, true);
-        var stockTile = ((ConstructorInfo)module.ResolveMethod(0x06000172)).Invoke(new[] { Enum.Parse(platform, "OculusRift"), (object)12345UL });
+        var stockTile = ((ConstructorInfo)StreamerProfile.Method(module, 0x06000172)).Invoke(new[] { Enum.Parse(platform, "OculusRift"), (object)12345UL });
         collectionType.GetMethod("Add", new[] { itemType }).Invoke(stock, new[] { stockTile });
         var fromResult = typeof(Task).GetMethod("FromResult").MakeGenericMethod(collectionType);
         runtime.GetField("original", All).SetValue(null, new Func<Task>(() => (Task)fromResult.Invoke(null, new[] { stock })));
-        var refreshed = (Task)module.ResolveMethod(0x060001F4).Invoke(null, null);
+        var refreshed = (Task)StreamerProfile.Method(module, 0x060001F4).Invoke(null, null);
         refreshed.GetAwaiter().GetResult();
         object result = refreshed.GetType().GetProperty("Result").GetValue(refreshed, null);
         object stockKey = Activator.CreateInstance(id, new[] { Enum.Parse(platform, "OculusRift"), (object)12345UL });
@@ -154,7 +155,7 @@ internal static class VentureIntegrationTest
         var marker = new InvalidOperationException("Isolated original scan marker");
         completion.GetType().GetMethod("SetException", new[] { typeof(Exception) }).Invoke(completion, new object[] { marker });
         runtime.GetField("original", All).SetValue(null, new Func<Task>(() => (Task)completion.GetType().GetProperty("Task").GetValue(completion, null)));
-        var pending = (Task)module.ResolveMethod(0x060001F4).Invoke(null, null);
+        var pending = (Task)StreamerProfile.Method(module, 0x060001F4).Invoke(null, null);
         try { pending.GetAwaiter().GetResult(); }
         catch (InvalidOperationException error)
         {
@@ -177,7 +178,7 @@ internal static class VentureIntegrationTest
         using (var child = Process.GetProcessById(Int32.Parse(File.ReadAllText(marker))))
         {
             // Use the same process termination routine that Streamer's X handler uses.
-            module.ResolveMethod(0x0602173B).Invoke(null, new[] { running[key] });
+            StreamerProfile.Method(module, 0x0602173B).Invoke(null, new[] { running[key] });
             Check(child.WaitForExit(4000), "The stock close routine stops the launcher and its worker");
             Check(SpinWait.SpinUntil(() => !running.Contains(key), 4000), "Streamer clears the Venture running state after exit");
         }
@@ -209,9 +210,9 @@ internal static class VentureIntegrationTest
         object[] found = { key, null };
         Check((bool)lookup.Invoke(collection, found), "Custom game uses its own dashboard ID namespace");
         object entry = found[1];
-        Check((string)((MethodInfo)module.ResolveMethod(0x06000160)).Invoke(entry, null) == "Custom VR Game" &&
-            (string)((MethodInfo)module.ResolveMethod(0x06000162)).Invoke(entry, null) == executable &&
-            (string)((MethodInfo)module.ResolveMethod(0x06000168)).Invoke(entry, null) == game.GetAttribute("cover"),
+        Check((string)((MethodInfo)StreamerProfile.Method(module, 0x06000160)).Invoke(entry, null) == "Custom VR Game" &&
+            (string)((MethodInfo)StreamerProfile.Method(module, 0x06000162)).Invoke(entry, null) == executable &&
+            (string)((MethodInfo)StreamerProfile.Method(module, 0x06000168)).Invoke(entry, null) == game.GetAttribute("cover"),
             "Custom tile preserves its title, executable and artwork path");
         string childMarker = Path.Combine(root, "custom-child.pid");
         Environment.SetEnvironmentVariable("VD_CUSTOM_TEST_CHILD_MARKER", childMarker);
@@ -231,7 +232,7 @@ internal static class VentureIntegrationTest
         {
             Check(running[key] is Process && !((Process)running[key]).HasExited && !child.HasExited,
                 "Custom game stays registered after its bootstrapper exits");
-            module.ResolveMethod(0x0602173B).Invoke(null, new[] { running[key] });
+            StreamerProfile.Method(module, 0x0602173B).Invoke(null, new[] { running[key] });
             Check(child.WaitForExit(4000), "The headset close routine stops the custom child game");
             Check(SpinWait.SpinUntil(() => !running.Contains(key), 4000), "Closing the custom game clears its running state");
         }

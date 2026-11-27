@@ -1,3 +1,4 @@
+using VirtualDesktop.Unlock;
 using System;
 using System.IO;
 using System.Linq;
@@ -23,10 +24,10 @@ class RenderSharpenHookTest
     static int Main(string[] args){
         IntPtr native=IntPtr.Zero;Timer timer=null;IDisposable data=null;Action<object,IntPtr> pointer=null;object owner=null;
         try{
-            using(var sha=SHA256.Create())if(BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(args[0]))).Replace("-","")!="0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8")throw new Exception("Unverified Streamer");
+            using(var sha=SHA256.Create())if(!StreamerProfile.IsVerifiedFile(args[0]))throw new Exception("Unverified Streamer");
             var bridge=Assembly.LoadFrom(args[2]).GetType("VirtualDesktop.LibraryOverrides.LaunchPresetRuntime",true).GetMethod("Set",BindingFlags.Static|BindingFlags.NonPublic);
             var assembly=Assembly.LoadFrom(args[0]);Directory.CreateDirectory(args[1]);
-            assembly.ManifestModule.ResolveField(0x04014843).SetValue(null,args[1]);assembly.ManifestModule.ResolveField(0x04014844).SetValue(null,args[1]);
+            StreamerProfile.Field(assembly.ManifestModule, 0x04014843).SetValue(null,args[1]);StreamerProfile.Field(assembly.ManifestModule, 0x04014844).SetValue(null,args[1]);
             var type=assembly.GetType("VirtualDesktop.Streamer.StreamerSettings",true);var settings=FormatterServices.GetUninitializedObject(type);
             timer=new Timer(delegate{},null,Timeout.Infinite,Timeout.Infinite);
             for(var t=type;t!=null;t=t.BaseType){
@@ -52,9 +53,9 @@ class RenderSharpenHookTest
                 applyFoveaSize.Invoke(null, new[] { assembly, preferences });
                 Check((float)foveaSize.GetValue(settings, null) == size / 100f, "Streamer reads the exact saved fovea size: " + size + "%");
             }
-            var renderHandler=(MethodInfo)assembly.ManifestModule.ResolveMethod(0x06000433);
-            var toggleHandler=(MethodInfo)assembly.ManifestModule.ResolveMethod(0x06000434);
-            var amountHandler=(MethodInfo)assembly.ManifestModule.ResolveMethod(0x06000435);
+            var renderHandler=(MethodInfo)StreamerProfile.Method(assembly.ManifestModule, 0x06000433);
+            var toggleHandler=(MethodInfo)StreamerProfile.Method(assembly.ManifestModule, 0x06000434);
+            var amountHandler=(MethodInfo)StreamerProfile.Method(assembly.ManifestModule, 0x06000435);
             owner=FormatterServices.GetUninitializedObject(renderHandler.DeclaringType);
             var nativePointer=HandlerField(assembly,renderHandler,8);var bytes=renderHandler.GetMethodBody().GetILAsByteArray();
             if(bytes[0x21]!=0x7d)throw new Exception("Unexpected render forwarding IL");

@@ -126,7 +126,9 @@ public sealed class LibraryForm : Form
     {
         this.preview = preview;
         this.streamerControl = streamerControl ?? new StreamerControl();
-        store = new LibraryStore(libraryPath ?? Path.Combine(AppContext.BaseDirectory, "Data", "library.json"));
+        store = new LibraryStore(libraryPath ?? (File.Exists(Path.Combine(AppContext.BaseDirectory, "installed.txt"))
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Virtual Desktop Unlock", "library.json")
+            : Path.Combine(AppContext.BaseDirectory, "Data", "library.json")));
         customGames = new CustomGames(preview || libraryPath != null
             ? Path.Combine(Path.GetDirectoryName(store.Path)!, "CustomGames.xml") : CustomGameCatalog.DefaultPath);
         foveaPreferences = new FoveaSizePreferences(preview || libraryPath != null

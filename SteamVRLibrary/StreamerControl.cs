@@ -50,7 +50,7 @@ public sealed class StreamerControl : IStreamerControl
                 string executable = StreamerLocation.FindInstalledHelperTarget();
                 if (!HasIntegration(executable)) return false;
                 var installed = AssemblyName.GetAssemblyName(Path.Combine(Path.GetDirectoryName(executable)!, "VirtualDesktop.LibraryOverrides.dll"));
-                return installed.Version < new Version(0, 3, 6, 0);
+                return installed.Version < new Version(0, 3, 7, 0);
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or BadImageFormatException or ArgumentException)
             { return false; }
@@ -78,10 +78,10 @@ public sealed class StreamerControl : IStreamerControl
 
     public async Task InstallIntegrationAsync()
     {
-        var setup = Path.Combine(AppContext.BaseDirectory, "Install Streamer Helper.exe");
+        var setup = Path.Combine(AppContext.BaseDirectory, "Virtual Desktop Unlock Installer.exe");
         if (!File.Exists(setup))
-            throw new FileNotFoundException(Localizer.T("Install Streamer Helper.exe is missing. Extract the full VD Unlock archive."));
-        using var process = Process.Start(new ProcessStartInfo(setup) { UseShellExecute = true })
+            throw new FileNotFoundException(Localizer.T("Virtual Desktop Unlock Installer.exe is missing. Extract the full VD Unlock archive."));
+        using var process = Process.Start(new ProcessStartInfo(setup, "--integration-only") { UseShellExecute = true })
             ?? throw new IOException(Localizer.T("Could not start the Streamer setup."));
         await process.WaitForExitAsync();
         // Setup displays its own errors and returns a nonzero code on cancellation.
@@ -172,7 +172,7 @@ public sealed class StreamerControl : IStreamerControl
         {
             AppLog.Current.Warning($"Streamer restart helper returned exit code {helper.ExitCode}.");
             if (helper.ExitCode == 2)
-                throw new IOException(Localizer.T("Could not restart Streamer. Run Install Streamer Helper.exe and select your Streamer installation."));
+                throw new IOException(Localizer.T("Could not restart Streamer. Run Virtual Desktop Unlock Installer.exe and select your Streamer installation."));
             throw new IOException(Localizer.T("Could not restart Streamer. Check that Streamer and the library integration are installed, then try again."));
         }
         AppLog.Current.Info("Streamer restarted.");
@@ -194,8 +194,7 @@ public sealed class StreamerControl : IStreamerControl
             using (var file = File.OpenRead(executable))
             {
                 var hash = Convert.ToHexString(SHA256.HashData(file));
-                if (hash is not ("FEAD548C57DF539006E6C97A7A29D46FDE172F756F40D65DBDB77ABAAFA3AEAD" or
-                    "0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8"))
+                if (!VirtualDesktop.Unlock.StreamerProfile.IsVerifiedFile(executable))
                     throw new IOException("The Streamer executable no longer matches a verified build.");
             }
             using var current = Process.GetCurrentProcess();

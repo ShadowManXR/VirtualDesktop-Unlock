@@ -38,24 +38,24 @@ namespace VirtualDesktop.LibraryOverrides
         public static void Install(Assembly assembly,Action<string> logger)
         {
             if(installed)return;
-            if(IntPtr.Size!=8 || assembly.GetName().Version!=new Version(1,34,25,0))throw new NotSupportedException("Launch presets require x64 Streamer 1.34.25.0.");
-            using(var sha=SHA256.Create())if(BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(assembly.Location))).Replace("-","")!="0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8")throw new NotSupportedException("Unverified launch-preset binary.");
+            StreamerProfile.Verify(assembly);
+            if(IntPtr.Size!=8 || !StreamerProfile.IsModern(assembly)) throw new NotSupportedException("Launch presets require a compatible modern x64 Streamer.");
             // Validate configuration before changing executable memory.
             ReadPreset(1,2981220);
-            var entry=(MethodInfo)assembly.ManifestModule.ResolveMethod(0x060001E8);
+            var entry=(MethodInfo)StreamerProfile.Method(assembly.ManifestModule, 0x060001E8);
             var game=assembly.GetType("VirtualDesktop.Interfaces.GameID",true);
             if(!entry.IsStatic || entry.ReturnType!=typeof(Task) || entry.GetParameters().Length!=1 || entry.GetParameters()[0].ParameterType!=game)throw new MissingMethodException("Launch signature changed.");
-            platformField=assembly.ManifestModule.ResolveField(0x040000A0);idField=assembly.ManifestModule.ResolveField(0x040000A1);
+            platformField=StreamerProfile.Field(assembly.ManifestModule, 0x040000A0);idField=StreamerProfile.Field(assembly.ManifestModule, 0x040000A1);
             if(platformField.DeclaringType!=game || !platformField.FieldType.IsEnum || idField.DeclaringType!=game || idField.FieldType!=typeof(ulong))throw new MissingFieldException("Game identity changed.");
-            var state=assembly.ManifestModule.ResolveMethod(0x06000235).DeclaringType;
-            var stateField=assembly.ManifestModule.ResolveField(0x04000174);
-            var builderField=assembly.ManifestModule.ResolveField(0x04000175);
-            var gameField=assembly.ManifestModule.ResolveField(0x04000176);
+            var state=StreamerProfile.Method(assembly.ManifestModule, 0x06000235).DeclaringType;
+            var stateField=StreamerProfile.Field(assembly.ManifestModule, 0x04000174);
+            var builderField=StreamerProfile.Field(assembly.ManifestModule, 0x04000175);
+            var gameField=StreamerProfile.Field(assembly.ManifestModule, 0x04000176);
             original=CreateOriginalLauncher(game,state,stateField,builderField,gameField);
             userSingleton=FindSingleton(assembly.GetType("VirtualDesktop.Mobile.SharedUserSettings",true));
             mobileSingleton=FindSingleton(assembly.GetType("VirtualDesktop.Mobile.SharedMobileSettings",true));
             streamerSingleton=FindSingleton(assembly.GetType("VirtualDesktop.Streamer.StreamerSettings",true));
-            connectedGetter=(MethodInfo)assembly.ManifestModule.ResolveMethod(0x06021427);
+            connectedGetter=(MethodInfo)StreamerProfile.Method(assembly.ManifestModule, 0x06021427);
             if(connectedGetter.IsStatic || connectedGetter.ReturnType!=typeof(bool) || connectedGetter.GetParameters().Length!=0)throw new MissingMethodException("Connection getter changed.");
             if(System.Windows.Application.Current==null)throw new InvalidOperationException("WPF application unavailable.");
             dispatcher=System.Windows.Application.Current.Dispatcher;log=logger;

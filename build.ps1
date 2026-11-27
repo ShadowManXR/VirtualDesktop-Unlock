@@ -2,7 +2,7 @@
 param([string]$StreamerPath,[switch]$SkipTests)
 $ErrorActionPreference='Stop'
 $root=$PSScriptRoot
-$version='0.3.6-alpha'
+$version='0.3.7-alpha'
 $env:DOTNET_CLI_HOME=Join-Path $root '.dotnet-build'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'
 $env:DOTNET_GENERATE_ASPNET_CERTIFICATE='false'
@@ -13,7 +13,7 @@ $tests=Join-Path $work 'runtime-tests'
 $stage=Join-Path $work ('VirtualDesktopUnlock-v'+$version+'-win-x64')
 $dist=Join-Path $root 'artifacts\dist'
 foreach($path in @($publish,$hook,$tests,$stage,$dist)){New-Item -ItemType Directory -Path $path -Force | Out-Null}
-& dotnet publish (Join-Path $root 'SteamVRLibrary\SteamVRLibrary.csproj') -c Release -o $publish ("-p:Version=$version") ('-p:OutputPath='+(Join-Path $work 'app-build')) --configfile (Join-Path $root 'NuGet.Config')
+& dotnet publish (Join-Path $root 'SteamVRLibrary\SteamVRLibrary.csproj') -c Release -o $publish ("-p:Version=$version") ('-p:OutputPath='+(Join-Path $work 'app-build')) --self-contained true -r win-x64 --source https://api.nuget.org/v3/index.json
 if($LASTEXITCODE -ne 0){throw 'Companion app build failed.'}
 $compiler=Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $framework=Split-Path -Parent $compiler
@@ -48,12 +48,31 @@ $ventureSources=@('/reference:System.Web.Extensions.dll','/reference:System.Draw
     (Join-Path $root 'Shared\CustomGameCatalog.cs'),
     (Join-Path $root 'Shared\MonitoringProtocol.cs'),
     (Join-Path $root 'src\RuntimeOverrides\MonitoringRuntime.cs'))
+$compatSources=@((Join-Path $root 'Shared\StreamerSymbols.cs'),(Join-Path $root 'Shared\CompatibilitySignatures.cs'),(Join-Path $root 'Shared\StreamerProfile.cs'),('/resource:'+(Join-Path $root 'compatibility\StreamerSignatures.xml')+',VDUnlock.Compatibility.Signatures.xml'))
 $remapSources=@((Join-Path $root 'src\RuntimeOverrides\ButtonRemapRuntime.cs'),(Join-Path $root 'Shared\ButtonRemapProfile.cs'))
-& $compiler /nologo /target:library ('/out:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) $references $ventureSources $remapSources (Join-Path $root 'src\RuntimeOverrides\LibraryOverrides.cs') (Join-Path $root 'src\RuntimeOverrides\BitrateRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRecovery.cs') (Join-Path $root 'src\RuntimeOverrides\SteamGameLifetime.cs') (Join-Path $root 'Shared\LaunchPresetConfiguration.cs') (Join-Path $root 'Shared\BitrateConfiguration.cs') (Join-Path $root 'Shared\FoveaSizePreferences.cs')
+& $compiler /nologo /target:library ('/out:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) $references $ventureSources $remapSources $compatSources (Join-Path $root 'src\RuntimeOverrides\LibraryOverrides.cs') (Join-Path $root 'src\RuntimeOverrides\BitrateRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRuntime.cs') (Join-Path $root 'src\RuntimeOverrides\LaunchPresetRecovery.cs') (Join-Path $root 'src\RuntimeOverrides\SteamGameLifetime.cs') (Join-Path $root 'Shared\LaunchPresetConfiguration.cs') (Join-Path $root 'Shared\BitrateConfiguration.cs') (Join-Path $root 'Shared\FoveaSizePreferences.cs')
 if($LASTEXITCODE -ne 0){throw 'Runtime helper build failed.'}
 Copy-Item -LiteralPath (Join-Path $root 'src\RuntimeOverrides\RuntimeHook.config') -Destination (Join-Path $hook 'VirtualDesktop.Streamer.exe.config')
+[xml]$hookConfiguration=Get-Content -LiteralPath (Join-Path $hook 'VirtualDesktop.Streamer.exe.config') -Raw
+$expectedHelper=[Reflection.AssemblyName]::new($hookConfiguration.configuration.runtime.appDomainManagerAssembly.value)
+$actualHelper=[Reflection.AssemblyName]::GetAssemblyName((Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll'))
+if($expectedHelper.FullName -ne $actualHelper.FullName){throw 'Startup configuration and helper assembly identity differ.'}
 [pscustomobject]@{Version=$version;StreamerVersion='1.34.25.0';StreamerSHA256='0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8';SupportedStreamers=@(@{Version='1.34.23.0';SHA256='FEAD548C57DF539006E6C97A7A29D46FDE172F756F40D65DBDB77ABAAFA3AEAD'},@{Version='1.34.25.0';SHA256='0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8'});HelperSHA256=(Get-FileHash -LiteralPath (Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')).Hash;ConfigSHA256=(Get-FileHash -LiteralPath (Join-Path $hook 'VirtualDesktop.Streamer.exe.config')).Hash} | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $hook 'manifest.json')
+& $compiler /nologo /reference:System.Web.Extensions.dll ('/out:'+(Join-Path $work 'CompatibilityTool.exe')) (Join-Path $root 'tools\CompatibilityTool.cs') (Join-Path $root 'scripts\CompatibilityAnalysis.cs') (Join-Path $root 'scripts\NativeDependencies.cs') $compatSources
+if($LASTEXITCODE -ne 0){throw 'Compatibility tool build failed.'}
+if($StreamerPath -and [Diagnostics.FileVersionInfo]::GetVersionInfo($StreamerPath).FileVersion -ne '1.34.23.0'){
+    & (Join-Path $work 'CompatibilityTool.exe') analyze ([IO.Path]::GetFullPath($StreamerPath)) (Join-Path $root 'compatibility\StreamerSignatures.xml') (Join-Path $tests 'compatibility.json')
+    if($LASTEXITCODE -ne 0){throw 'Streamer compatibility analysis failed.'}
+    $env:VD_COMPATIBILITY_PROFILE=Join-Path $tests 'compatibility.json.xml'
+}
 if(!$SkipTests){
+    if($StreamerPath -and [Diagnostics.FileVersionInfo]::GetVersionInfo($StreamerPath).FileVersion -ne '1.34.23.0'){
+        & (Join-Path $root 'scripts\CompatibilityTests.ps1') -Tool (Join-Path $work 'CompatibilityTool.exe') -Streamer ([IO.Path]::GetFullPath($StreamerPath)) -Signatures (Join-Path $root 'compatibility\StreamerSignatures.xml') -OutputDirectory (Join-Path $tests 'compatibility-rejections')
+    }
+    & $compiler /nologo /target:exe /main:InstallerTests /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:Microsoft.CSharp.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll ('/out:'+(Join-Path $tests 'InstallerTests.exe')) (Join-Path $root 'scripts\InstallerTests.cs') (Join-Path $root 'scripts\StreamerSetup.cs') (Join-Path $root 'scripts\InstallerProcessControl.cs') (Join-Path $root 'scripts\CompatibilityAnalysis.cs') (Join-Path $root 'scripts\NativeDependencies.cs') (Join-Path $root 'Shared\StreamerLocation.cs') $compatSources
+    if($LASTEXITCODE -ne 0){throw 'Installer test build failed.'}
+    & (Join-Path $tests 'InstallerTests.exe') (Join-Path $tests 'deployment')
+    if($LASTEXITCODE -ne 0){throw 'Installer deployment tests failed.'}
     & (Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe') -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'scripts\HelperInstallerTests.ps1')
     if($LASTEXITCODE -ne 0){throw 'Helper installer service tests failed.'}
     & $compiler /nologo /optimize+ /target:exe ('/out:'+(Join-Path $hook 'LaunchPresetTests.exe')) ('/reference:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) (Join-Path $root 'src\RuntimeOverrides\LaunchPresetTests.cs')
@@ -68,7 +87,7 @@ if(!$SkipTests){
     $test.WaitForExit()
     Get-Content -LiteralPath (Join-Path $publish 'self-test-result.txt') | Write-Output
     if($test.ExitCode -ne 0){throw 'Companion tests failed.'}
-    & $compiler /nologo /target:exe ('/out:'+(Join-Path $tests 'RuntimeHookTest.exe')) $references (Join-Path $root 'src\RuntimeOverrides\RuntimeHookTest.cs')
+    & $compiler /nologo /target:exe ('/out:'+(Join-Path $tests 'RuntimeHookTest.exe')) $references ('/reference:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) (Join-Path $root 'src\RuntimeOverrides\RuntimeHookTest.cs')
     if($LASTEXITCODE -ne 0){throw 'Runtime test harness build failed.'}
     Copy-Item -LiteralPath (Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll') -Destination $tests
     Copy-Item -LiteralPath (Join-Path $hook 'VirtualDesktop.Streamer.exe.config') -Destination (Join-Path $tests 'RuntimeHookTest.exe.config')
@@ -88,15 +107,15 @@ if(!$SkipTests){
             if($LASTEXITCODE -ne 0){throw 'Button remap hook harness did not compile.'}
             & (Join-Path $hook 'ButtonRemapHookTest.exe') ([IO.Path]::GetFullPath($StreamerPath))
             if($LASTEXITCODE -ne 0){throw 'Isolated button remap hook test failed.'}
-            & $compiler /nologo /target:exe ('/out:'+(Join-Path $tests 'VentureIntegrationTest.exe')) (Join-Path $root 'src\RuntimeOverrides\VentureIntegrationTest.cs')
+            & $compiler /nologo /target:exe ('/out:'+(Join-Path $tests 'VentureIntegrationTest.exe')) ('/reference:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) (Join-Path $root 'src\RuntimeOverrides\VentureIntegrationTest.cs')
             if($LASTEXITCODE -ne 0){throw 'Venture integration test did not compile.'}
             & (Join-Path $tests 'VentureIntegrationTest.exe') ([IO.Path]::GetFullPath($StreamerPath)) (Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll') (Join-Path $tests 'venture-integration') (Join-Path $work 'libwebp-1.6.0-windows-x64\test.webp')
             if($LASTEXITCODE -ne 0){throw 'Isolated Venture game-list test failed.'}
-            & $compiler /nologo /target:exe ('/out:'+(Join-Path $tests 'FovHookTest.exe')) (Join-Path $root 'src\RuntimeOverrides\FovHookTest.cs')
+            & $compiler /nologo /target:exe ('/out:'+(Join-Path $tests 'FovHookTest.exe')) ('/reference:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) (Join-Path $root 'src\RuntimeOverrides\FovHookTest.cs')
             if($LASTEXITCODE -ne 0){throw 'FOV forwarding harness did not compile.'}
             & (Join-Path $tests 'FovHookTest.exe') ([IO.Path]::GetFullPath($StreamerPath)) (Join-Path $tests 'fov-settings') (Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')
             if($LASTEXITCODE -ne 0){throw 'Isolated FOV forwarding test failed.'}
-            & $compiler /nologo /target:exe ('/out:'+(Join-Path $tests 'RenderSharpenHookTest.exe')) (Join-Path $root 'src\RuntimeOverrides\RenderSharpenHookTest.cs')
+            & $compiler /nologo /target:exe ('/out:'+(Join-Path $tests 'RenderSharpenHookTest.exe')) ('/reference:'+(Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')) (Join-Path $root 'src\RuntimeOverrides\RenderSharpenHookTest.cs')
             if($LASTEXITCODE -ne 0){throw 'Render/sharpen forwarding harness did not compile.'}
             & (Join-Path $tests 'RenderSharpenHookTest.exe') ([IO.Path]::GetFullPath($StreamerPath)) (Join-Path $tests 'render-sharpen-settings') (Join-Path $hook 'VirtualDesktop.LibraryOverrides.dll')
             if($LASTEXITCODE -ne 0){throw 'Isolated render/sharpen forwarding test failed.'}
@@ -149,32 +168,22 @@ if(!$SkipTests){
         }
     }
 }
-foreach($name in @('Virtual Desktop Unlock.exe','Virtual Desktop Unlock.dll','Virtual Desktop Unlock.deps.json','Virtual Desktop Unlock.runtimeconfig.json')){Copy-Item -LiteralPath (Join-Path $publish $name) -Destination $stage}
-New-Item -ItemType Directory -Path (Join-Path $stage 'runtime-override') -Force | Out-Null
-foreach($name in @('VirtualDesktop.LibraryOverrides.dll','VirtualDesktop.Streamer.exe.config','manifest.json')){Copy-Item -LiteralPath (Join-Path $hook $name) -Destination (Join-Path $stage 'runtime-override')}
-Get-ChildItem -LiteralPath (Join-Path $root 'scripts') -File |
-    Where-Object { $_.Extension -in '.cmd','.ps1' -and $_.Name -notlike '*Tests.ps1' } | Copy-Item -Destination $stage
-$setupName='Install Streamer Helper.exe'
-$setupResources=@("/resource:$root\scripts\HelperInstaller.ps1,HelperInstaller.ps1")
+Get-ChildItem -LiteralPath $publish -File | Where-Object {$_.Extension -notin '.pdb','.txt' -and $_.Name -ne 'preview.png'} | Copy-Item -Destination $stage
+foreach($name in @('README.md','LICENSE','CHANGELOG.md','TESTING.md')){Copy-Item -LiteralPath (Join-Path $root $name) -Destination $stage}
+$applicationZip=Join-Path $work 'Application.zip'
+Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $applicationZip
+$setupName='Virtual Desktop Unlock Installer.exe'
+$setupResources=@("/resource:$root\scripts\InstallerProcessControl.cs,InstallerProcessControl.cs","/resource:$root\scripts\HelperInstaller.ps1,HelperInstaller.ps1","/resource:$applicationZip,Application.zip")
 foreach($name in @('VirtualDesktop.LibraryOverrides.dll','VirtualDesktop.Streamer.exe.config','manifest.json')){
     $setupResources+=("/resource:"+(Join-Path $hook $name)+","+$name)
 }
-$setupOptions=@('/nologo','/target:winexe','/platform:x64','/reference:System.Windows.Forms.dll',
-    ('/out:'+(Join-Path $stage $setupName)),('/win32icon:'+(Join-Path $root 'assets\icon.ico')),
+$setupOptions=@('/nologo','/target:winexe','/platform:x64','/reference:System.Windows.Forms.dll','/reference:System.Drawing.dll','/reference:Microsoft.CSharp.dll','/reference:System.IO.Compression.dll','/reference:System.IO.Compression.FileSystem.dll',
+    ('/out:'+(Join-Path $work $setupName)),('/win32icon:'+(Join-Path $root 'assets\icon.ico')),
     ('/win32manifest:'+(Join-Path $root 'scripts\StreamerSetup.manifest')))
-& $compiler $setupOptions $setupResources (Join-Path $root 'scripts\StreamerSetup.cs') (Join-Path $root 'Shared\StreamerLocation.cs')
-if($LASTEXITCODE -ne 0){throw 'Streamer setup build failed.'}
-foreach($name in @('README.md','LICENSE','CHANGELOG.md','TESTING.md')){Copy-Item -LiteralPath (Join-Path $root $name) -Destination $stage}
-New-Item -ItemType Directory -Path (Join-Path $stage 'assets') -Force | Out-Null
-Copy-Item -LiteralPath (Join-Path $root 'assets\README.md') -Destination (Join-Path $stage 'assets\README.md')
-$zip=Join-Path $dist ('VirtualDesktopUnlock-v'+$version+'-win-x64.zip')
-Compress-Archive -LiteralPath $stage -DestinationPath $zip -Force
-$sum=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()+'  '+(Split-Path -Leaf $zip)
-$sum | Set-Content -LiteralPath ($zip+'.sha256') -Encoding ASCII
-$setup=Join-Path $dist ('VirtualDesktopUnlock-v'+$version+'-Streamer-Setup.exe')
-Copy-Item -LiteralPath (Join-Path $stage $setupName) -Destination $setup -Force
-((Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()+'  '+(Split-Path -Leaf $setup)) |
-    Set-Content -LiteralPath ($setup+'.sha256') -Encoding ASCII
-Write-Output ('Streamer setup: '+$setup)
-Write-Output ('Release: '+$zip)
+& $compiler $setupOptions $setupResources $compatSources (Join-Path $root 'scripts\StreamerSetup.cs') (Join-Path $root 'scripts\InstallerProcessControl.cs') (Join-Path $root 'scripts\CompatibilityAnalysis.cs') (Join-Path $root 'scripts\NativeDependencies.cs') (Join-Path $root 'Shared\StreamerLocation.cs')
+if($LASTEXITCODE -ne 0){throw 'Universal installer build failed.'}
+$setup=Join-Path $dist $setupName
+Copy-Item -LiteralPath (Join-Path $work $setupName) -Destination $setup -Force
+((Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()+'  '+$setupName) | Set-Content -LiteralPath ($setup+'.sha256') -Encoding ASCII
+Write-Output ('Universal installer: '+$setup)
 Write-Output ('Staging directory: '+$stage)

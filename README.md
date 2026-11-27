@@ -2,7 +2,7 @@
 
 # Virtual Desktop Unlock
 
-**v0.3.6-alpha** · Windows x64 · Unofficial · MIT
+**v0.3.7-alpha** · Windows x64 · Unofficial · MIT
 
 An unofficial program for extending Virtual Desktop Streaming. Modifications are applied only to the back-end server component installed on Windows; the client requires no modification. Add custom Steam games, including games that use third-party VR mods, to Virtual Desktop's actual headset Games tab using the optional runtime helper. The desktop companion app organizes your installed Steam games, saves selections for the helper, and provides optional headset-specific bitrate ceilings. There is also an option to set application launch presets, such as for FPS, quality, and FOV tangent.
 
@@ -26,9 +26,13 @@ Custom programs currently launch with their default arguments. Launch presets an
 
 ## Download and run
 
-Download the archive from [Release](https://github.com/ShadowManXR/VirtualDesktop-Unlock/releases)
+Download **Virtual Desktop Unlock Installer.exe** from [Releases](https://github.com/ShadowManXR/VirtualDesktop-Unlock/releases). Disconnect the headset, run the installer, and approve Windows administrator access.
 
-Run **Install Streamer Helper.exe** to enable VD Unlock's Streamer features, including applying your game library. Setup detects the Streamer installation and lets you browse to `VirtualDesktop.Streamer.exe` if needed. Use the setup executable included in the archive or download it separately.
+The single installer includes the desktop app, .NET 10 desktop runtime, runtime helper and compatibility analyzer. It finds Streamer through the installed location, running process or registry and supports browsing to a custom folder. It analyzes metadata, normalized method bodies, and managed/native dependencies before installing the integration. A generated SHA-256/MVID-bound profile maps the helper to that specific binary. The signed Streamer executable remains unchanged.
+
+The app installs in `%ProgramFiles%\Virtual Desktop Unlock` with a Start menu shortcut and an entry in Windows **Settings → Apps → Installed apps**. After installation, **Create a desktop shortcut** and **Launch Virtual Desktop Unlock** are selected by default; click **Finish** to apply them. Windows **Uninstall** removes the app, its shortcuts, and managed Streamer integration while keeping saved settings and presets. Installed app library state is kept in `%APPDATA%\Virtual Desktop Unlock`; other existing preferences are preserved. Running an installer again updates or repairs the app and integration. From the installed app, the integration link invokes the same installer with `--integration-only`. To remove only the integration, run the same installer with `--uninstall`.
+
+Compatibility is verified rather than assumed from a version number. Both official 1.34.25.0 layouts are covered; the known 1.34.23.0 binary retains legacy support. Structurally compatible token shifts can be resolved automatically. Missing, changed or ambiguous hooks require an updated release and cause installation to stop before changing Streamer files. This does not guarantee compatibility with arbitrary future Streamer changes.
 
 Launch the Virtual Desktop Unlock program; you can then close the window, as the application will remain in the system tray. For its features to be available, the program must be running in the background; to ensure this, select the option in the application settings to have it launch automatically when Windows starts.
 
@@ -37,7 +41,7 @@ Launch the Virtual Desktop Unlock program; you can then close the window, as the
 
 ## Troubleshooting
 
-The desktop app writes startup events, library scan warnings, and exception details to `%LOCALAPPDATA%\Virtual Desktop Unlock\Logs\app.log`. It keeps the previous log as `app.log.1`. Streamer helper and installer errors are recorded in `%ProgramData%\Virtual Desktop\LibraryOverrides.log` and `%ProgramData%\Virtual Desktop Unlock\installer.log`.
+Compatibility analysis is saved to `%ProgramData%\Virtual Desktop Unlock\compatibility-report.txt`. The desktop app writes startup events, library scan warnings, and exception details to `%LOCALAPPDATA%\Virtual Desktop Unlock\Logs\app.log`. It keeps the previous log as `app.log.1`. Streamer helper and installer errors are recorded in `%ProgramData%\Virtual Desktop\LibraryOverrides.log` and `%ProgramData%\Virtual Desktop Unlock\installer.log`.
 
 ## Future plans
 
@@ -81,7 +85,7 @@ Install the .NET 10 SDK on Windows x64. The build also uses the .NET Framework C
 powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
-The build runs the companion UI/storage tests and an AppDomain-manager loading test, then creates the release ZIP and SHA-256 checksum in `artifacts/dist/`. For the additional delayed-initialization test against your own supported Streamer installation:
+The build downloads official Microsoft runtime packs from NuGet, runs the companion UI/storage tests and an AppDomain-manager loading test, then creates `Virtual Desktop Unlock Installer.exe` and its SHA-256 checksum in `artifacts/dist/`. The app payload is self-contained: users do not need the .NET SDK or a separate .NET 10 Desktop Runtime installation. For the additional delayed-initialization test against your own supported Streamer installation:
 
 ```powershell
 .\build.ps1 -StreamerPath 'C:\Program Files\Virtual Desktop Streamer\VirtualDesktop.Streamer.exe'

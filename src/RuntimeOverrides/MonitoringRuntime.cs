@@ -53,37 +53,37 @@ namespace VirtualDesktop.LibraryOverrides
             if (originalWrite != null) return;
             Module module = assembly.ManifestModule;
             using (var process = Process.GetCurrentProcess()) processId = process.Id;
-            var writeField = module.ResolveField(0x0401653F);
+            var writeField = StreamerProfile.Field(module, 0x0401653F);
             var invoke = writeField.FieldType.GetMethod("Invoke");
             if (!writeField.IsStatic || invoke.ReturnType != typeof(void) ||
                 !invoke.GetParameters().Select(parameter => parameter.ParameterType).SequenceEqual(new[] { typeof(object), typeof(byte[]), typeof(int), typeof(int) }))
                 throw new NotSupportedException("Monitoring write delegate signature changed.");
-            frameSize = Marshal.SizeOf(module.ResolveField(0x04014C8A).DeclaringType);
-            sliceSize = Marshal.SizeOf(module.ResolveField(0x04014CFD).DeclaringType);
-            frameBytesOffset = Offset(module.ResolveField(0x04014C8A));
-            frameIndexOffset = Offset(module.ResolveField(0x04014C7F));
-            frameSourceOffset = Offset(module.ResolveField(0x04014C80));
-            sliceBytesOffset = Offset(module.ResolveField(0x04014CFD));
-            gameOffset = Offset(module.ResolveField(0x04014C84));
-            encodeOffset = Offset(module.ResolveField(0x04014C85));
-            totalLatencyField = module.ResolveField(0x04014B5D);
-            inputIndexField = module.ResolveField(0x04014B5C);
+            frameSize = Marshal.SizeOf(StreamerProfile.Field(module, 0x04014C8A).DeclaringType);
+            sliceSize = Marshal.SizeOf(StreamerProfile.Field(module, 0x04014CFD).DeclaringType);
+            frameBytesOffset = Offset(StreamerProfile.Field(module, 0x04014C8A));
+            frameIndexOffset = Offset(StreamerProfile.Field(module, 0x04014C7F));
+            frameSourceOffset = Offset(StreamerProfile.Field(module, 0x04014C80));
+            sliceBytesOffset = Offset(StreamerProfile.Field(module, 0x04014CFD));
+            gameOffset = Offset(StreamerProfile.Field(module, 0x04014C84));
+            encodeOffset = Offset(StreamerProfile.Field(module, 0x04014C85));
+            totalLatencyField = StreamerProfile.Field(module, 0x04014B5D);
+            inputIndexField = StreamerProfile.Field(module, 0x04014B5C);
             if (totalLatencyField.FieldType != typeof(float) || inputIndexField.FieldType != typeof(int) ||
-                module.ResolveField(0x04014C84).FieldType != typeof(float) || module.ResolveField(0x04014C85).FieldType != typeof(float))
+                StreamerProfile.Field(module, 0x04014C84).FieldType != typeof(float) || StreamerProfile.Field(module, 0x04014C85).FieldType != typeof(float))
                 throw new NotSupportedException("Monitoring timing layout changed.");
             if (frameSize != 160 || sliceSize != 16 || frameBytesOffset != 152 || sliceBytesOffset != 12)
                 throw new NotSupportedException("Monitoring packet layout changed.");
-            serverField = module.ResolveField(0x040000CD);
-            streamField = module.ResolveField(0x04014C98);
-            connectedGetter = (MethodInfo)module.ResolveMethod(0x06021427);
+            serverField = StreamerProfile.Field(module, 0x040000CD);
+            streamField = StreamerProfile.Field(module, 0x04014C98);
+            connectedGetter = (MethodInfo)StreamerProfile.Method(module, 0x06021427);
             Type sharedSettings = assembly.GetType("VirtualDesktop.Mobile.SharedStreamerSettings", true);
             settingsGetter = sharedSettings.BaseType.GetProperty("Default", BindingFlags.Static | BindingFlags.Public | BindingFlags.FlattenHierarchy).GetGetMethod();
             sourceGetter = sharedSettings.GetProperty("StreamingSource").GetGetMethod();
-            inputField = module.ResolveField(0x040002F2);
-            deviceField = module.ResolveField(0x04014B61);
-            headField = module.ResolveField(0x04014A82);
-            batteryField = module.ResolveField(0x04014AC2);
-            trackedField = module.ResolveField(0x04014AC0);
+            inputField = StreamerProfile.Field(module, 0x040002F2);
+            deviceField = StreamerProfile.Field(module, 0x04014B61);
+            headField = StreamerProfile.Field(module, 0x04014A82);
+            batteryField = StreamerProfile.Field(module, 0x04014AC2);
+            trackedField = StreamerProfile.Field(module, 0x04014AC0);
             if (batteryField.FieldType != typeof(sbyte) || !inputField.IsStatic || !serverField.IsStatic)
                 throw new NotSupportedException("Monitoring headset data layout changed.");
             originalDelegate = (Delegate)writeField.GetValue(null);

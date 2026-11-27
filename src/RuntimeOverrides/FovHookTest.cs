@@ -1,3 +1,4 @@
+using VirtualDesktop.Unlock;
 using System;
 using System.IO;
 using System.Linq;
@@ -23,11 +24,11 @@ class FovHookTest
     static int Main(string[] args){
         IntPtr block=IntPtr.Zero;Timer timer=null;Action<object,IntPtr> pointer=null;object owner=null;
         try{
-            using(var sha=SHA256.Create())if(BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(args[0]))).Replace("-","")!="0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8")throw new Exception("Unverified Streamer binary");
+            using(var sha=SHA256.Create())if(!StreamerProfile.IsVerifiedFile(args[0]))throw new Exception("Unverified Streamer binary");
             var helper=Assembly.LoadFrom(args[2]);
             var bridge=helper.GetType("VirtualDesktop.LibraryOverrides.LaunchPresetRuntime",true).GetMethod("Set",BindingFlags.Static|BindingFlags.NonPublic);
             var a=Assembly.LoadFrom(args[0]);Directory.CreateDirectory(args[1]);
-            a.ManifestModule.ResolveField(0x04014843).SetValue(null,args[1]);a.ManifestModule.ResolveField(0x04014844).SetValue(null,args[1]);
+            StreamerProfile.Field(a.ManifestModule, 0x04014843).SetValue(null,args[1]);StreamerProfile.Field(a.ManifestModule, 0x04014844).SetValue(null,args[1]);
             var type=a.GetType("VirtualDesktop.Streamer.StreamerSettings",true);var settings=FormatterServices.GetUninitializedObject(type);
             // Storage was redirected before singleton type initialization. Provide
             // a no-op timer to the synthetic instance so the tested setters do
@@ -38,7 +39,7 @@ class FovHookTest
                 f=t.GetField("<Default>k__BackingField",Flags|BindingFlags.DeclaredOnly);if(f!=null)f.SetValue(null,settings);
             }
             type.GetField("_horizontalFovTangent",Flags).SetValue(settings,1f);type.GetField("_verticalFovTangent",Flags).SetValue(settings,1f);type.GetField("_useFovStencil",Flags).SetValue(settings,true);
-            var horizontal=(MethodInfo)a.ManifestModule.ResolveMethod(0x06000431);var vertical=(MethodInfo)a.ManifestModule.ResolveMethod(0x06000432);
+            var horizontal=(MethodInfo)StreamerProfile.Method(a.ManifestModule, 0x06000431);var vertical=(MethodInfo)StreamerProfile.Method(a.ManifestModule, 0x06000432);
             var hb=horizontal.GetMethodBody().GetILAsByteArray();var vb=vertical.GetMethodBody().GetILAsByteArray();
             if(hb[8]!=0x7b||hb[0x21]!=0x7d||vb[8]!=0x7b||vb[0x21]!=0x7d)throw new Exception("Native forwarding IL changed");
             var nativePointer=a.ManifestModule.ResolveField(BitConverter.ToInt32(hb,9));var hField=a.ManifestModule.ResolveField(BitConverter.ToInt32(hb,0x22));var vField=a.ManifestModule.ResolveField(BitConverter.ToInt32(vb,0x22));

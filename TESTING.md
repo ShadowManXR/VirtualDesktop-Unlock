@@ -70,3 +70,25 @@ Opening or saving the editor does not apply settings immediately. Tests cover na
 Launch preparation and recovery are logged in `%PROGRAMDATA%\Virtual Desktop\LibraryOverrides.log`. Installer output is in `%PROGRAMDATA%\Virtual Desktop Unlock\installer.log`.
 
 Render resolution and sharpening presets and pending recovery use XML format version 3. Before downgrading, close the game, keep VD connected until restoration completes, then disable both new overrides in every configured game and save. FOV-only records use format 2 and require helper 0.2.1 or later; disable FOV too when reverting to a pre-0.2.1 build. Confirm `%APPDATA%\Virtual Desktop Unlock\LaunchPresetRecovery.xml` has cleared. Uninstall this helper, then reinstall the previous build's helper and run its app. Older apps and helpers do not support the new format 3 records.
+
+
+## 0.3.7-alpha unified installer
+
+`build.ps1 -StreamerPath <VirtualDesktop.Streamer.exe>` generates an isolated compatibility profile and runs the existing feature tests through that mapping. Each analysis uses a separate reflection-only process, so two assemblies with the same identity cannot be confused. No Streamer installation files are changed by these tests.
+
+Additional checks cover complete runtime revalidation of generated profiles; rejection of changed SHA-256, MVID, missing/wrong symbols, external XML entities and missing signatures; initial app deployment; upgrade with retained user data; rollback after an injected copy failure; and ZIP path traversal. Startup configuration identity must match the compiled helper identity.
+
+Validated locally against the original signed 1.34.25 binary (SHA-256 beginning `0229A322`) and revised signed 1.34.25 binary (beginning `7534E832`). The helper resolves 79 required internal symbols for each. Older 1.34.23 retains the previous exact-hash path; its modern features remain unavailable.
+
+The standalone installer embeds `Application.zip`, the helper/config/manifest, analyzer and immutable compatibility signatures. Its private `Analyze` method can be invoked by the developer tool's `installer-analysis` command to test the actual packaged resources without installing or restarting Streamer. The developer `payload` command extracts the application ZIP for self-contained app checks.
+
+Live acceptance: disconnect the headset, run **Virtual Desktop Unlock Installer.exe**, verify the detected folder, install, then launch the app from the Start menu. Reconnect VD and check library additions, a launch/exit preset cycle, remaps, monitoring and bitrate profiles. Repeat installation for repair; use the same executable with `--uninstall` to remove the integration. These live installation/headset steps have not been run as part of this build task.
+
+
+The 0.3.7 installer lock regression tests reproduce a real CLR-mapped DLL sharing violation. They cover native process-path lookup, empty `Process.Path` values, retaining other Streamer installations, refusing unverifiable processes, lock preflight without mutation, atomic replacement and rollback, and failures before replacement. The installer queries Restart Manager for diagnostics and never shuts down unrelated lock owners.
+
+
+Installer completion/removal tests verify the default shortcut/launch selections and render the completion window, check Windows Installed apps registration values and quoting, remove a fixture's managed app/runtime files while retaining user data, reject an escaping uninstall manifest before any deletion, and retain shortcuts pointing at another installation. A windowless launch probe verified the desktop-shell launch method. Live installation and removal from Windows Installed apps remain manual acceptance steps.
+
+
+Progress tests confirm that installation work runs off the UI thread while Windows Forms timers continue ticking, worker failures close the progress window and propagate, and unknown-duration stages use an animated indicator. The progress window is also rendered for layout inspection.

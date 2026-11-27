@@ -42,19 +42,19 @@ namespace VirtualDesktop.LibraryOverrides
             }
             preferences = settings;
             Module module = assembly.ManifestModule;
-            var entry = (MethodInfo)module.ResolveMethod(0x060001F4);
+            var entry = (MethodInfo)StreamerProfile.Method(module, 0x060001F4);
             Type collection = assembly.GetType("VirtualDesktop.Streamer.GameCollection", true);
             if (!entry.IsStatic || entry.GetParameters().Length != 0 || entry.ReturnType != typeof(Task<>).MakeGenericType(collection))
                 throw new MissingMethodException("Venture game-list signature changed.");
-            var close = module.ResolveMethod(0x060001E9);
+            var close = StreamerProfile.Method(module, 0x060001E9);
             byte[] closeCode = close.GetMethodBody().GetILAsByteArray();
             if (closeCode[0] != 0x7E) throw new MissingFieldException("Venture running-game list changed.");
             runningGames = (IDictionary)module.ResolveField(BitConverter.ToInt32(closeCode, 1)).GetValue(null);
-            chooseRuntime = (MethodInfo)module.ResolveMethod(0x060001FD);
-            notifyExit = (MethodInfo)module.ResolveMethod(0x06000200);
+            chooseRuntime = (MethodInfo)StreamerProfile.Method(module, 0x060001FD);
+            notifyExit = (MethodInfo)StreamerProfile.Method(module, 0x06000200);
 
-            FieldInfo builder = module.ResolveField(0x04000171);
-            FieldInfo state = module.ResolveField(0x04000170);
+            FieldInfo builder = StreamerProfile.Field(module, 0x04000171);
+            FieldInfo state = StreamerProfile.Field(module, 0x04000170);
             Type stateMachine = builder.DeclaringType;
             Type builderType = typeof(AsyncTaskMethodBuilder<>).MakeGenericType(collection);
             if (!stateMachine.IsValueType || !typeof(IAsyncStateMachine).IsAssignableFrom(stateMachine) ||
@@ -138,11 +138,11 @@ namespace VirtualDesktop.LibraryOverrides
             Type collectionType = collection.GetType();
             Type item = collectionType.BaseType.GetGenericArguments()[1];
             Module module = item.Module;
-            var constructor = (ConstructorInfo)module.ResolveMethod(0x06000172);
+            var constructor = (ConstructorInfo)StreamerProfile.Method(module, 0x06000172);
             Type platform = constructor.GetParameters()[0].ParameterType;
             object oculus = Enum.Parse(platform, "OculusRift");
             var setters = new[] { 0x06000161, 0x06000163, 0x06000165, 0x06000167, 0x06000169 }
-                .Select(token => (MethodInfo)module.ResolveMethod(token)).ToArray();
+                .Select(token => (MethodInfo)StreamerProfile.Method(module, token)).ToArray();
             MethodInfo add = collectionType.GetMethod("Add", new[] { item });
             Type idType = collectionType.BaseType.GetGenericArguments()[0];
             ConstructorInfo idConstructor = idType.GetConstructor(new[] { platform, typeof(ulong) });
@@ -173,13 +173,13 @@ namespace VirtualDesktop.LibraryOverrides
             Type collectionType = collection.GetType();
             Type item = collectionType.BaseType.GetGenericArguments()[1];
             Module module = item.Module;
-            var constructor = (ConstructorInfo)module.ResolveMethod(0x06000172);
+            var constructor = (ConstructorInfo)StreamerProfile.Method(module, 0x06000172);
             MethodInfo add = collectionType.GetMethod("Add", new[] { item });
             Type idType = collectionType.BaseType.GetGenericArguments()[0];
             MethodInfo lookup = collectionType.BaseType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                 .Single(method => method.ReturnType == typeof(bool) && method.GetParameters().Select(p => p.ParameterType).SequenceEqual(new[] { idType, item.MakeByRefType() }));
             var setters = new[] { 0x06000161, 0x06000163, 0x06000165, 0x06000167, 0x06000169 }
-                .Select(token => (MethodInfo)module.ResolveMethod(token)).ToArray();
+                .Select(token => (MethodInfo)StreamerProfile.Method(module, token)).ToArray();
             if (constructor.DeclaringType != item || add == null ||
                 setters.Any(setter => setter.DeclaringType != item || setter.GetParameters().Single().ParameterType != typeof(string)))
                 throw new MissingMemberException("Venture game entry layout changed.");

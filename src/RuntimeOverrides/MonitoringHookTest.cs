@@ -24,12 +24,12 @@ internal static class MonitoringHookTest
     private static MonitoringSample Capture() { return (MonitoringSample)runtime.GetMethod("Capture", All).Invoke(null, new object[] { 1.0 }); }
     private static void SetBattery(int raw)
     {
-        var frameField = module.ResolveField(0x040002F2);
-        var deviceField = module.ResolveField(0x04014B61);
-        var headField = module.ResolveField(0x04014A82);
+        var frameField = StreamerProfile.Field(module, 0x040002F2);
+        var deviceField = StreamerProfile.Field(module, 0x04014B61);
+        var headField = StreamerProfile.Field(module, 0x04014A82);
         object frame = Activator.CreateInstance(frameField.FieldType), device = Activator.CreateInstance(deviceField.FieldType), head = Activator.CreateInstance(headField.FieldType);
-        module.ResolveField(0x04014AC0).SetValue(head, (byte)1);
-        module.ResolveField(0x04014AC2).SetValue(head, (sbyte)raw);
+        StreamerProfile.Field(module, 0x04014AC0).SetValue(head, (byte)1);
+        StreamerProfile.Field(module, 0x04014AC2).SetValue(head, (sbyte)raw);
         headField.SetValue(device, head); deviceField.SetValue(frame, device); frameField.SetValue(null, frame);
     }
     private static object Settings(Assembly assembly)
@@ -45,10 +45,10 @@ internal static class MonitoringHookTest
     }
     private static void SetLatency(float seconds, int index)
     {
-        var field = module.ResolveField(0x040002F2);
+        var field = StreamerProfile.Field(module, 0x040002F2);
         object input = field.GetValue(null);
-        module.ResolveField(0x04014B5D).SetValue(input, seconds);
-        module.ResolveField(0x04014B5C).SetValue(input, index);
+        StreamerProfile.Field(module, 0x04014B5D).SetValue(input, seconds);
+        StreamerProfile.Field(module, 0x04014B5C).SetValue(input, index);
         field.SetValue(null, input);
     }
     private static void Main(string[] args)
@@ -59,10 +59,10 @@ internal static class MonitoringHookTest
         object shared = Settings(assembly);
         var source = shared.GetType().GetField("_streamingSource", All);
         source.SetValue(shared, Enum.ToObject(source.FieldType, 1));
-        var write = (MethodInfo)module.ResolveMethod(0x06021472);
-        var sliceWrite = (MethodInfo)module.ResolveMethod(0x06021474);
-        var sizeField = module.ResolveField(0x04014C8A);
-        var sliceSize = module.ResolveField(0x04014CFD);
+        var write = (MethodInfo)StreamerProfile.Method(module, 0x06021472);
+        var sliceWrite = (MethodInfo)StreamerProfile.Method(module, 0x06021474);
+        var sizeField = StreamerProfile.Field(module, 0x04014C8A);
+        var sliceSize = StreamerProfile.Field(module, 0x04014CFD);
         var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
         try
         {
@@ -73,11 +73,11 @@ internal static class MonitoringHookTest
                 using (var stream = new MemoryStream())
                 {
                     object server = FormatterServices.GetUninitializedObject(write.DeclaringType);
-                    var gate = module.ResolveField(0x04014C95);
+                    var gate = StreamerProfile.Field(module, 0x04014C95);
                     gate.SetValue(server, Activator.CreateInstance(gate.FieldType, true));
-                    module.ResolveField(0x04014C97).SetValue(server, tcp);
-                    module.ResolveField(0x04014C98).SetValue(server, stream);
-                    module.ResolveField(0x040000CD).SetValue(null, server);
+                    StreamerProfile.Field(module, 0x04014C97).SetValue(server, tcp);
+                    StreamerProfile.Field(module, 0x04014C98).SetValue(server, stream);
+                    StreamerProfile.Field(module, 0x040000CD).SetValue(null, server);
                     SetBattery(-77);
                     SetLatency(0.04f, 1);
                     var first = Capture();
@@ -89,13 +89,13 @@ internal static class MonitoringHookTest
                         byte[] payload = Enumerable.Range(0, 64).Select(value => (byte)value).ToArray(); Marshal.Copy(payload, 0, data, 64);
                         object metadata = Activator.CreateInstance(sizeField.DeclaringType);
                         sizeField.SetValue(metadata, 64);
-                        module.ResolveField(0x04014C80).SetValue(metadata, Enum.ToObject(source.FieldType, 1));
+                        StreamerProfile.Field(module, 0x04014C80).SetValue(metadata, Enum.ToObject(source.FieldType, 1));
                         for (int index = 0; index < 90; index++)
                         {
-                            module.ResolveField(0x04014C7F).SetValue(metadata, index);
-                            module.ResolveField(0x04014C7E).SetValue(metadata, (long)index * 10000);
-                            module.ResolveField(0x04014C84).SetValue(metadata, 4f + (index % 2) * 2);
-                            module.ResolveField(0x04014C85).SetValue(metadata, 2f + (index % 2) * 2);
+                            StreamerProfile.Field(module, 0x04014C7F).SetValue(metadata, index);
+                            StreamerProfile.Field(module, 0x04014C7E).SetValue(metadata, (long)index * 10000);
+                            StreamerProfile.Field(module, 0x04014C84).SetValue(metadata, 4f + (index % 2) * 2);
+                            StreamerProfile.Field(module, 0x04014C85).SetValue(metadata, 2f + (index % 2) * 2);
                             write.Invoke(server, new object[] { metadata, data, false });
                         }
                         var measured = Capture();
@@ -135,23 +135,23 @@ internal static class MonitoringHookTest
                         measured = Capture();
                         Check(measured.Fps == 0 && measured.BitrateMbps > 0, "Repeated frame IDs add payload bytes without inflating FPS");
                         Check(measured.GameRenderMs == null && measured.EncodingMs == null, "Duplicate frames do not add timing samples");
-                        module.ResolveField(0x04014C7F).SetValue(metadata, 90);
-                        module.ResolveField(0x04014C84).SetValue(metadata, Single.NaN);
-                        module.ResolveField(0x04014C85).SetValue(metadata, -1f);
+                        StreamerProfile.Field(module, 0x04014C7F).SetValue(metadata, 90);
+                        StreamerProfile.Field(module, 0x04014C84).SetValue(metadata, Single.NaN);
+                        StreamerProfile.Field(module, 0x04014C85).SetValue(metadata, -1f);
                         write.Invoke(server, new object[] { metadata, data, false });
                         measured = Capture();
                         Check(measured.GameRenderMs == null && measured.EncodingMs == null, "Invalid timing values are excluded from interval averages");
-                        module.ResolveField(0x04014C84).SetValue(metadata, 5f);
-                        module.ResolveField(0x04014C85).SetValue(metadata, 3f);
+                        StreamerProfile.Field(module, 0x04014C84).SetValue(metadata, 5f);
+                        StreamerProfile.Field(module, 0x04014C85).SetValue(metadata, 3f);
                         sizeField.SetValue(metadata, 0);
-                        module.ResolveField(0x04014C7F).SetValue(metadata, 91);
+                        StreamerProfile.Field(module, 0x04014C7F).SetValue(metadata, 91);
                         write.Invoke(server, new object[] { metadata, IntPtr.Zero, false });
                         object slice = Activator.CreateInstance(sliceSize.DeclaringType); sliceSize.SetValue(slice, 64);
                         for (int index = 0; index < 4; index++) sliceWrite.Invoke(server, new object[] { slice, data, false });
                         measured = Capture();
                         Check(measured.Fps == 1 && Math.Abs(measured.BitrateMbps.Value - 4 * 64 * 8.0 / 1000000) < 0.000001,
                             "Foveated and stereo slices aggregate into one frame and all video payload bytes");
-                        module.ResolveField(0x04014C80).SetValue(metadata, Enum.ToObject(source.FieldType, 0));
+                        StreamerProfile.Field(module, 0x04014C80).SetValue(metadata, Enum.ToObject(source.FieldType, 0));
                         sizeField.SetValue(metadata, 64); write.Invoke(server, new object[] { metadata, data, false });
                         sliceWrite.Invoke(server, new object[] { slice, data, false }); measured = Capture();
                         Check(measured.Fps == 0 && measured.BitrateMbps == 0, "Desktop packets are excluded from VR monitoring");
@@ -163,7 +163,7 @@ internal static class MonitoringHookTest
                         Check(measured.Fps == null && measured.BitrateMbps == null && measured.TotalLatencyMs == null && measured.GameRenderMs == null && measured.EncodingMs == null, "Leaving VR produces a gap instead of stale metrics");
                     }
                     finally { Marshal.FreeHGlobal(data); }
-                    module.ResolveField(0x040000CD).SetValue(null, null);
+                    StreamerProfile.Field(module, 0x040000CD).SetValue(null, null);
                     var disconnected = Capture();
                     Check(!disconnected.Connected && disconnected.BatteryPercent == null && disconnected.Fps == null,
                         "Disconnect clears all monitoring values");

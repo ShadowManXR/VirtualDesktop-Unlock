@@ -9,9 +9,9 @@ using System.Xml;
 using System.Security.Cryptography;
 using VirtualDesktop.Unlock;
 
-[assembly: AssemblyVersion("0.3.6.0")]
+[assembly: AssemblyVersion("0.3.7.0")]
 [assembly: AssemblyTitle("Virtual Desktop Library Overrides")]
-[assembly: AssemblyFileVersion("0.3.6.0")]
+[assembly: AssemblyFileVersion("0.3.7.0")]
 
 namespace VirtualDesktop.LibraryOverrides
 {
@@ -63,19 +63,14 @@ namespace VirtualDesktop.LibraryOverrides
             if (Interlocked.CompareExchange(ref installed, 1, 0) != 0) return;
             try
             {
-                bool updated=assembly.GetName().Version==new Version(1,34,25,0);
-                if (!updated && assembly.GetName().Version != new Version(1, 34, 23, 0))
-                    throw new NotSupportedException("Library overrides support only verified Streamer 1.34.23.0 and 1.34.25.0 binaries.");
-                string expectedHash=updated?"0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8":"FEAD548C57DF539006E6C97A7A29D46FDE172F756F40D65DBDB77ABAAFA3AEAD";
-                using(var sha=SHA256.Create())
-                    if(BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(assembly.Location))).Replace("-","")!=expectedHash)
-                        throw new NotSupportedException("Streamer binary does not match a verified library override build.");
+                StreamerProfile.Verify(assembly);
+                bool updated=StreamerProfile.IsModern(assembly);
                 string testDirectory = Environment.GetEnvironmentVariable("VD_LIBRARY_TEST_DATA");
                 if (!String.IsNullOrEmpty(testDirectory))
                 {
                     if (!Directory.Exists(testDirectory)) throw new DirectoryNotFoundException(testDirectory);
-                    assembly.ManifestModule.ResolveField(updated?0x04014843:0x0401483f).SetValue(null, testDirectory);
-                    assembly.ManifestModule.ResolveField(updated?0x04014844:0x04014840).SetValue(null, testDirectory);
+                    StreamerProfile.Field(assembly.ManifestModule, updated?0x04014843:0x0401483f).SetValue(null, testDirectory);
+                    StreamerProfile.Field(assembly.ManifestModule, updated?0x04014844:0x04014840).SetValue(null, testDirectory);
                 }
                 Type manager = assembly.GetType("VirtualDesktop.Streamer.GameManager", true);
                 RuntimeHelpers.RunClassConstructor(manager.TypeHandle);
@@ -152,7 +147,7 @@ namespace VirtualDesktop.LibraryOverrides
             {
                 // The verified setter clamps to 0.15–0.35. Set its backing field
                 // before Streamer reads it to initialize the foveated stream.
-                var field = assembly.ManifestModule.ResolveField(0x0400026D);
+                var field = StreamerProfile.Field(assembly.ManifestModule, 0x0400026D);
                 if (field.DeclaringType != type || field.Name != "_foveaSize" || field.FieldType != typeof(float) || field.IsStatic)
                     throw new NotSupportedException("Streamer fovea size field changed.");
                 field.SetValue(settings, requested);

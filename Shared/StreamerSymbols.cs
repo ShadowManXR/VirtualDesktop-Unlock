@@ -1,0 +1,28 @@
+using System;
+namespace VirtualDesktop.Unlock
+{
+    // Logical identifiers from the original integration. The installer resolves
+    // them by metadata structure and IL signatures, not by these token numbers.
+    public static class StreamerSymbols
+    {
+        public static readonly int[] Required = new[] {
+            0x040000A0,0x040000A1,0x040000CD,0x04000170,0x04000171,0x04000174,
+            0x04000175,0x04000176,0x0400026D,0x04000293,
+            0x04000294,0x04000295,0x04000296,0x0400029A,0x040002F2,0x04000366,
+            0x04014843,0x04014844,0x04014A82,0x04014AC0,0x04014AC2,0x04014ACE,
+            0x04014ACF,0x04014AD0,0x04014AD1,0x04014AD2,0x04014AD3,0x04014AD4,
+            0x04014B5C,0x04014B5D,0x04014B61,0x04014C7E,0x04014C7F,0x04014C80,
+            0x04014C84,0x04014C85,0x04014C8A,0x04014C95,0x04014C97,0x04014C98,
+            0x04014CFD,0x04014DB6,0x04014DB7,0x04014DB8,0x04014DB9,
+            0x0401653F,0x06000160,0x06000161,0x06000162,
+            0x06000163,0x06000164,0x06000165,0x06000166,0x06000167,0x06000168,
+            0x06000169,0x0600016A,0x0600016C,0x06000170,0x06000172,0x060001E8,
+            0x060001E9,0x060001F4,0x060001FD,0x06000200,0x06000235,0x06000410,
+            0x06000424,0x06000431,0x06000432,0x06000433,0x06000434,
+            0x06000435,0x060212CD,0x060212CE,0x06021427,
+            0x06021472,0x06021474,0x0602173B
+        };
+        public const string ProfileFileName = "VirtualDesktop.Unlock.Compatibility.xml";
+        public const string BaselineResource = "VDUnlock.Compatibility.Signatures.xml";
+    }
+}

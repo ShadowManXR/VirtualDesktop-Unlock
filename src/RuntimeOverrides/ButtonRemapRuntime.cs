@@ -124,7 +124,7 @@ namespace VirtualDesktop.LibraryOverrides
         private static DynamicMethod CreatePublisher(Module module, FieldInfo output)
         {
             Type state = output.FieldType;
-            var flags = new[] { module.ResolveField(0x04014ACE), module.ResolveField(0x04014ACF) };
+            var flags = new[] { StreamerProfile.Field(module, 0x04014ACE), StreamerProfile.Field(module, 0x04014ACF) };
             foreach (var field in flags)
             {
                 if (field.DeclaringType != state || !field.FieldType.IsEnum ||
@@ -140,7 +140,7 @@ namespace VirtualDesktop.LibraryOverrides
             }
             // These four bytes are decoded into LibOVR's left/right IndexTrigger
             // and HandTrigger arrays, in that order.
-            var pressure = new[] { 0x04014AD0, 0x04014AD1, 0x04014AD2, 0x04014AD3 }.Select(module.ResolveField).ToArray();
+            var pressure = new[] { 0x04014AD0, 0x04014AD1, 0x04014AD2, 0x04014AD3 }.Select(t => StreamerProfile.Field(module, t)).ToArray();
             if (pressure.Any(field => field.DeclaringType != state || field.FieldType != typeof(byte)))
                 throw new NotSupportedException("Controller pressure layout changed.");
 
@@ -171,7 +171,7 @@ namespace VirtualDesktop.LibraryOverrides
         private static ButtonRemapProfile ActiveProfile() { return Volatile.Read(ref active); }
         private static void InstallWriter(Module module)
         {
-            var original = (MethodInfo)module.ResolveMethod(WriterToken);
+            var original = (MethodInfo)StreamerProfile.Method(module, WriterToken);
             Type frame = original.GetParameters().Single().ParameterType;
             if (original.IsStatic || original.ReturnType != typeof(void) || !frame.IsByRef)
                 throw new NotSupportedException("Controller writer signature changed.");
@@ -181,7 +181,7 @@ namespace VirtualDesktop.LibraryOverrides
             if (code[ControllerStoreOffset] != 0x7D || body.LocalVariables.Count != 0)
                 throw new NotSupportedException("Controller writer layout changed.");
             FieldInfo output = module.ResolveField(BitConverter.ToInt32(code, ControllerStoreOffset + 1));
-            if (output.MetadataToken != 0x04000366)
+            if (output.MetadataToken != StreamerProfile.Token(module, 0x04000366))
                 throw new NotSupportedException("Controller state field changed.");
 
             // Replace the single stfld instruction in a managed copy of the original

@@ -40,19 +40,9 @@ namespace VirtualDesktop.LibraryOverrides
         {
             if (installed) return;
             Version version=assembly.GetName().Version;
-            updatedStreamer=version==new Version(1,34,25,0);
-            if (!updatedStreamer && version!=new Version(1,34,23,0))
-            {
-                log=logger;
-                try { current=BitrateConfiguration.Read(ConfigurationPath);revision=BitrateConfiguration.Revision(ConfigurationPath); }
-                catch { current=new BitrateConfiguration();revision=null; }
-                string reason="Bitrate overrides are unavailable on Streamer "+version+"; game-library additions are supported. Stock bitrate behavior retained.";
-                WriteStatus(false,reason,true);logger(reason);return;
-            }
-            if (IntPtr.Size != 8) throw new NotSupportedException("Bitrate overrides require x64 Streamer 1.34.23.0 or 1.34.25.0.");
-            using (var sha = SHA256.Create())
-                if (BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(assembly.Location))).Replace("-", "") != (updatedStreamer?"0229A322137F55687240D2B51F5F7002056D9277D7FA001EC6CB4EB25AF0BFB8":"FEAD548C57DF539006E6C97A7A29D46FDE172F756F40D65DBDB77ABAAFA3AEAD"))
-                    throw new NotSupportedException("Bitrate override executable hash does not match the verified Streamer.");
+            StreamerProfile.Verify(assembly);
+            updatedStreamer=StreamerProfile.IsModern(assembly);
+            if(IntPtr.Size!=8) throw new NotSupportedException("Bitrate overrides require x64.");
             streamer = assembly; log = logger;
             InitializeNativeDiagnostics();
             var sharedType=assembly.GetType("VirtualDesktop.Mobile.SharedStreamerSettings",true);
@@ -62,7 +52,7 @@ namespace VirtualDesktop.LibraryOverrides
                 sharedSettingsField=baseType.GetField("<Default>k__BackingField",BindingFlags.Static|BindingFlags.NonPublic|BindingFlags.DeclaredOnly);
                 if(sharedSettingsField!=null)break;
             }
-            var method = assembly.ManifestModule.ResolveMethod(updatedStreamer?0x060212CD:0x060212B6) as MethodInfo;
+            var method = StreamerProfile.Method(assembly.ManifestModule, updatedStreamer?0x060212CD:0x060212B6) as MethodInfo;
             var parameters = method.GetParameters();
             if (!method.IsStatic || method.ReturnType != typeof(int) || parameters.Length != 3 || parameters[0].ParameterType.FullName != "Xenko.VR.HmdType" || parameters[1].ParameterType.FullName != "VirtualDesktop.Net.VideoCodec" || parameters[2].ParameterType != typeof(bool))
                 throw new MissingMethodException("Unexpected bitrate calculation signature.");
@@ -152,7 +142,7 @@ namespace VirtualDesktop.LibraryOverrides
             // OculusStreamer does not subscribe to VRBitrateLimitChanged. Its existing
             // forwarding routine must also refresh any already-created encoder wrappers.
             var encoderOwner=FindEncoderOwner(mobile);
-            if(encoderOwner!=null)streamer.ManifestModule.ResolveMethod(updatedStreamer?0x06000424:0x0600041D).Invoke(encoderOwner,null);
+            if(encoderOwner!=null)StreamerProfile.Method(streamer.ManifestModule, updatedStreamer?0x06000424:0x0600041D).Invoke(encoderOwner,null);
         }
         private static object FindEncoderOwner(object mobile)
         {
@@ -171,10 +161,10 @@ namespace VirtualDesktop.LibraryOverrides
             int[] rates=updatedStreamer?new[]{0x04014DB6,0x04014DB7,0x04014DB8,0x04014DB9}:new[]{0x04014DAB,0x04014DAC,0x04014DAD};
             foreach(int token in slots)
             {
-                var wrapper=streamer.ManifestModule.ResolveField(token).GetValue(owner);
+                var wrapper=StreamerProfile.Field(streamer.ManifestModule, token).GetValue(owner);
                 if(wrapper==null){values.Add("none");continue;}
                 var parts=new List<string>();
-                foreach(int rate in rates)parts.Add(streamer.ManifestModule.ResolveField(rate).GetValue(wrapper).ToString());
+                foreach(int rate in rates)parts.Add(StreamerProfile.Field(streamer.ManifestModule, rate).GetValue(wrapper).ToString());
                 values.Add(String.Join(",",parts.ToArray())+" (NVENC "+ReadNativeRateControl(wrapper)+")");
             }
             return String.Join("|",values.ToArray());
@@ -189,14 +179,14 @@ namespace VirtualDesktop.LibraryOverrides
             Type wrapperType=null;Func<object,IntPtr> configuration=null;int average=-1,maximum=-1;
             try
             {
-                var pointer=streamer.ManifestModule.ResolveField(0x04014F7B);
+                var pointer=StreamerProfile.Field(streamer.ManifestModule, 0x04014F7B);
                 wrapperType=pointer.DeclaringType;
                 var getter=new DynamicMethod("ReadNvencConfigurationPointer",typeof(IntPtr),new[]{typeof(object)},typeof(BitrateRuntime),true);
                 var il=getter.GetILGenerator();il.Emit(OpCodes.Ldarg_0);il.Emit(OpCodes.Castclass,wrapperType);il.Emit(OpCodes.Ldfld,pointer);il.Emit(OpCodes.Conv_I);il.Emit(OpCodes.Ret);
                 configuration=(Func<object,IntPtr>)getter.CreateDelegate(typeof(Func<object,IntPtr>));
-                var rate=streamer.ManifestModule.ResolveField(0x04014FA7);
-                average=FieldOffset(rate)+FieldOffset(streamer.ManifestModule.ResolveField(0x04015127));
-                maximum=FieldOffset(rate)+FieldOffset(streamer.ManifestModule.ResolveField(0x04015128));
+                var rate=StreamerProfile.Field(streamer.ManifestModule, 0x04014FA7);
+                average=FieldOffset(rate)+FieldOffset(StreamerProfile.Field(streamer.ManifestModule, 0x04015127));
+                maximum=FieldOffset(rate)+FieldOffset(StreamerProfile.Field(streamer.ManifestModule, 0x04015128));
             }
             catch(Exception e){log("Native NVENC introspection unavailable; managed encoder targets are verified instead: "+e.GetBaseException().Message);return;}
             nativeWrapperType=wrapperType;nativeConfiguration=configuration;nativeAverageOffset=average;nativeMaximumOffset=maximum;

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.7-alpha — 2026-11-26
+
+- Show a responsive installation progress window during compatibility analysis, Streamer integration, file copying, and app registration.
+
+- Add checked completion options for a desktop shortcut and app launch, plus Windows Installed apps registration and removal of the application and integration while preserving preferences.
+
+- Fix installation over a running elevated Streamer: query executable paths through the Windows API, wait for file locks to clear, and replace/roll back integration files atomically. Report lock owners instead of silently skipping inaccessible processes.
+
+- Distribute one self-contained Virtual Desktop Unlock Installer.exe for app installation, integration updates, repair, and integration removal.
+- Detect nondefault Streamer paths and analyze managed/native dependencies, metadata structures and normalized method bodies before installing.
+- Resolve internal symbols for compatible Streamer layouts into a hash/MVID-bound profile, revalidated by the helper at runtime. Cover both signed 1.34.25 builds; reject missing or ambiguous hooks.
+- Preserve integration rollback/service state and user preferences, close older app processes during upgrades, and add a Start menu shortcut.
+
 ## 0.3.6-alpha — 2026-11-25
 
 - Add an optional per-game gamma launch override (0.50–2.00, neutral 1.00), applied before launch and restored after exit while preserving manual changes.
