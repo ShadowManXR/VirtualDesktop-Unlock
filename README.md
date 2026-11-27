@@ -32,8 +32,6 @@ The single installer includes the desktop app, .NET 10 desktop runtime, runtime 
 
 The app installs in `%ProgramFiles%\Virtual Desktop Unlock` with a Start menu shortcut and an entry in Windows **Settings → Apps → Installed apps**. After installation, **Create a desktop shortcut** and **Launch Virtual Desktop Unlock** are selected by default; click **Finish** to apply them. Windows **Uninstall** removes the app, its shortcuts, and managed Streamer integration while keeping saved settings and presets. Installed app library state is kept in `%APPDATA%\Virtual Desktop Unlock`; other existing preferences are preserved. Running an installer again updates or repairs the app and integration. From the installed app, the integration link invokes the same installer with `--integration-only`. To remove only the integration, run the same installer with `--uninstall`.
 
-Compatibility is verified rather than assumed from a version number. Both official 1.34.25.0 layouts are covered; the known 1.34.23.0 binary retains legacy support. Structurally compatible token shifts can be resolved automatically. Missing, changed or ambiguous hooks require an updated release and cause installation to stop before changing Streamer files. This does not guarantee compatibility with arbitrary future Streamer changes.
-
 Launch the Virtual Desktop Unlock program; you can then close the window, as the application will remain in the system tray. For its features to be available, the program must be running in the background; to ensure this, select the option in the application settings to have it launch automatically when Windows starts.
 
 > [!WARNING]
